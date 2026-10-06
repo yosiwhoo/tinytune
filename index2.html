@@ -1,0 +1,2672 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TinyTune</title>
+<style>:root{color-scheme:dark}body{margin:0;padding:0}img{max-width:100%}</style>
+</head>
+<body>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Special+Gothic+Expanded+One&family=Poppins:wght@400;500;600;700&family=Anonymous+Pro:wght@400;700&family=Secular+One&family=Heebo:wght@400;500;600&family=Rubik:wght@600;700&display=swap');
+
+  /* TinyTune brand v3 — locked system: Black + Cream + Lime + Purple,
+     Special Gothic Expanded One (hero headlines), Poppins (body/buttons),
+     Anonymous Pro (labels/steps/nav), 16-18px main radius, pills only for
+     micro-UI, star SVG as a depth element, real logo + icon pack.
+
+     The Latin display/body/mono trio above has no Hebrew glyphs, so Hebrew
+     content uses its own matched family per role instead of silently
+     falling back to a generic system sans: Secular One for headlines
+     (echoes Special Gothic Expanded One's bold, geometric presence),
+     Heebo for body copy and buttons (the Hebrew sibling of Poppins/Roboto),
+     and Rubik (bold) for labels/steps/nav. Cousine — the requested match for
+     Anonymous Pro — turns out to ship Latin glyphs only, so labels would've
+     silently fallen back to a plain system font in Hebrew; Rubik is a
+     verified Hebrew+Latin family and, at a bold weight, keeps the same
+     confident, technical presence Anonymous Pro gives the English labels.
+     Font roles are custom properties so #device[lang="he"] can swap the
+     whole trio at once — see the override just below. */
+  :root{
+    --bg:#0B0B0B;
+    --bg-glow: radial-gradient(60% 50% at 50% 0%, rgba(200,255,53,0.10) 0%, #0B0B0B 60%);
+    --surface:#161616;
+    --surface-2:#1F1F1F;
+    --ink:#F3F2ED;
+    --ink-soft:#9A9A93;
+    --accent:#C8FF35;
+    --accent-ink:#0B0B0B;
+    --accent-warm:#6C45FF;
+    --accent-warm-ink:#F3F2ED;
+    --border:#2A2A2A;
+    --tick-off:#2A2A2A;
+    --shadow: 0 24px 60px -20px rgba(0,0,0,0.7);
+    --radius: 18px;
+    --font-display:'Special Gothic Expanded One','Poppins',system-ui,sans-serif;
+    --font-body:'Poppins',system-ui,-apple-system,sans-serif;
+    --font-label:'Anonymous Pro',monospace;
+  }
+  #device[lang="he"]{
+    --font-display:'Secular One','Special Gothic Expanded One',system-ui,sans-serif;
+    --font-body:'Heebo',system-ui,-apple-system,sans-serif;
+    --font-label:'Rubik',system-ui,sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    background-image:var(--bg-glow);
+    color:var(--ink);
+    font-family:var(--font-body);
+    padding:32px 16px;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    min-height:100%;
+  }
+
+  h1,h2,h3{
+    font-family:var(--font-display);
+    font-weight:400;
+    text-transform:uppercase;
+    letter-spacing:0;
+    margin:0;
+    text-wrap:balance;
+  }
+
+  .device{
+    width:100%;
+    max-width:440px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:24px;
+    box-shadow:var(--shadow);
+    padding:28px 24px 60px;
+    position:relative;
+    overflow:hidden;
+    isolation:isolate;
+  }
+
+  .device-content{
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+    position:relative;
+    z-index:1;
+  }
+
+  .device::before{
+    content:"";
+    position:absolute;
+    inset:0 0 auto 0;
+    height:4px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-warm));
+    opacity:.9;
+    z-index:2;
+  }
+
+  /* ---------- icons ---------- */
+  .icon{ width:18px; height:18px; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .icon-sm{ width:14px; height:14px; }
+  .icon-lg{ width:22px; height:22px; }
+  .icon-fill{ fill:currentColor; stroke:none; }
+
+  /* ---------- logo ---------- */
+  .tt-logo{ width:172px; height:auto; display:block; flex:none; }
+
+  /* ---------- decorative star (depth element) ----------
+     The brand's own sparkle mark, blown up big and centered behind the
+     ENTIRE device as one single persistent background presence — a
+     sibling of .device-content, not a per-panel element. That's
+     deliberate: a copy re-created inside each panel-head sat at different
+     points in the DOM relative to the header/dial above it and the chips
+     below it, so on some screens it painted behind its neighbours and on
+     others in front of them (plain stacking-order roulette). One shared
+     layer, always at z-index 0 versus .device-content's z-index 1, is
+     unconditionally behind everything on every screen.
+
+     Per step it swaps both which edge its centre sits on and its colour
+     — right edge + lime on Tune In, left edge + purple on Frequency, back
+     to right + lime on On Air — echoing the old mascot's alternating
+     side-to-side handoff between steps. It's a soft glow, not a flat
+     shape: a radial fade from solid colour at the centre to fully
+     transparent at the star's own points. `left`/`top` position it,
+     `translate` plays the one-shot rise-in from below on every step
+     change (JS restarts it), and `rotate` spins it independently and
+     extremely slowly forever — three separate transform-related
+     properties so the one-shot entrance and the endless spin never fight
+     over the same `transform` value. .device's overflow:hidden clips the
+     whole thing at the card edge. */
+  #device{ --star-color:var(--accent); }
+  #device.star-purple{ --star-color:var(--accent-warm); }
+
+  .brand-star-bg{
+    position:absolute;
+    top:50%;
+    width:440px;
+    height:440px;
+    opacity:.8;
+    translate:-50% -50%;
+    rotate:0deg;
+    pointer-events:none;
+    z-index:0;
+    animation:starSpin 140s linear infinite;
+  }
+  .brand-star-bg.pos-right{ left:100%; }
+  .brand-star-bg.pos-left{ left:0%; }
+  .brand-star-bg.is-rising{ animation:starSpin 140s linear infinite, starRiseIn 1.1s cubic-bezier(.22,.61,.36,1) both; }
+
+  @keyframes starSpin{ to{ rotate:360deg; } }
+  @keyframes starRiseIn{
+    0%{ translate:-50% 65%; }
+    100%{ translate:-50% -50%; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .brand-star-bg{ animation:none; }
+    .brand-star-bg.is-rising{ animation:none; }
+  }
+  @media (max-width:480px){
+    .brand-star-bg{ width:340px; height:340px; }
+  }
+
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .brand-tag{ font-size:12.5px; color:var(--ink-soft); margin-top:4px; }
+
+  .lang-toggle{
+    display:flex;
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:3px;
+    gap:2px;
+    flex:none;
+  }
+  .lang-toggle button{
+    border:none;
+    background:none;
+    color:var(--ink-soft);
+    font-family:var(--font-label);
+    font-size:11px;
+    font-weight:700;
+    padding:5px 10px;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  .lang-toggle button[aria-pressed="true"]{
+    background:var(--accent);
+    color:var(--accent-ink);
+  }
+  /* The toggle's "עב" label is always Hebrew text, regardless of which
+     language is currently active — but --font-label reflects the ACTIVE
+     language, so while the UI is in English it resolves to Anonymous Pro,
+     which has no Hebrew glyphs at all, and the label silently falls back to
+     a generic system font. Hardcode this one button's font instead of
+     relying on the variable. */
+  .lang-toggle button[data-lang="he"]{
+    font-family:'Rubik','Secular One',system-ui,sans-serif;
+  }
+  .voice-warning{
+    font-size:12px;
+    color:var(--accent-warm);
+    line-height:1.4;
+  }
+  [dir="rtl"] .script-text{ text-align:right; }
+
+  /* dial progress */
+  .dial{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .dial-step{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    align-items:center;
+    text-align:center;
+  }
+  .dial-tick{
+    width:100%;
+    height:4px;
+    border-radius:2px;
+    background:var(--tick-off);
+    position:relative;
+  }
+  .dial-step.done .dial-tick, .dial-step.active .dial-tick{ background:var(--accent); }
+  .dial-label{
+    font-family:var(--font-label);
+    font-size:10px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  .dial-step.active .dial-label{ color:var(--accent); font-weight:700; }
+
+  .panel{ display:flex; flex-direction:column; gap:20px; }
+  .panel-head{ display:flex; flex-direction:column; gap:10px; position:relative; isolation:isolate; }
+  .eyebrow{
+    font-family:var(--font-label);
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--accent);
+    font-weight:700;
+  }
+  .headline{ font-size:27px; line-height:1.1; }
+  .sub{ font-size:14.5px; color:var(--ink-soft); line-height:1.5; margin-top:0; font-family:var(--font-body); }
+  .level-badge{
+    font-family:var(--font-label);
+    font-size:11px;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:999px;
+    background: color-mix(in srgb, var(--accent-warm) 16%, var(--surface-2));
+    color: var(--accent-warm);
+    white-space:nowrap;
+  }
+
+  .chip-grid{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip-grid-2col{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .chip{
+    display:flex; align-items:center; gap:8px;
+    border:1px solid var(--border);
+    background:var(--surface-2);
+    color:var(--ink);
+    padding:12px 14px;
+    min-height:50px;
+    border-radius:var(--radius);
+    font-family:var(--font-body);
+    font-size:13.5px;
+    font-weight:500;
+    text-align:start;
+    cursor:pointer;
+    transition:transform .12s ease, background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .chip .icon{ color:var(--ink-soft); }
+  .chip:hover{ transform:translateY(-1px); }
+  .chip[aria-pressed="true"]{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:var(--accent-ink);
+    font-weight:600;
+  }
+  .chip[aria-pressed="true"] .icon{ color:var(--accent-ink); }
+  .chip:focus-visible, button:focus-visible, input:focus-visible{
+    outline:2px solid var(--accent-warm);
+    outline-offset:2px;
+  }
+
+  .time-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    border:1px solid var(--border);
+    background:var(--accent);
+    color:var(--accent-ink);
+    padding:7px 8px 7px 14px;
+    border-radius:999px;
+    font-family:var(--font-label);
+    font-size:12.5px;
+    font-weight:700;
+  }
+  .time-chip button{
+    background:color-mix(in srgb, var(--accent-ink) 25%, transparent);
+    border:none;
+    color:var(--accent-ink);
+    width:18px;height:18px;
+    border-radius:50%;
+    font-size:12px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .empty-hint{ font-size:12.5px; color:var(--ink-soft); font-style:italic; }
+
+  .surprise-row{ display:flex; align-items:center; gap:10px; }
+  .link-btn{
+    background:none;border:none;padding:0;
+    color:var(--accent-warm);
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:13.5px;
+    cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+
+  label.field-label{
+    font-size:12px;
+    font-weight:700;
+    color:var(--ink-soft);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    font-family:var(--font-label);
+  }
+
+  .input-with-icon{ position:relative; }
+  .input-with-icon .icon{
+    position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    color:var(--ink-soft); pointer-events:none;
+  }
+  [dir="rtl"] .input-with-icon .icon{ left:auto; right:14px; }
+
+  input[type="text"], input[type="time"], select{
+    width:100%;
+    border:1px solid var(--border);
+    background:var(--surface-2);
+    color:var(--ink);
+    border-radius:var(--radius);
+    padding:12px 14px;
+    font-family:var(--font-body);
+    font-size:14.5px;
+  }
+  select{ cursor:pointer; }
+
+  /* comes after the generic input rule above on purpose — same selector
+     specificity, so source order is what makes the icon's reserved space
+     win over the input's own padding shorthand instead of being clobbered
+     by it. */
+  .input-with-icon input{ padding-left:40px; }
+  [dir="rtl"] .input-with-icon input{ padding-left:14px; padding-right:40px; }
+  .voice-empty{ font-size:12.5px; color:var(--ink-soft); font-style:italic; }
+
+  .rhythm-group{ display:flex; flex-direction:column; gap:8px; }
+  .option-row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .option{
+    flex:1 1 auto;
+    min-width:96px;
+    border:1px solid var(--border);
+    background:var(--surface-2);
+    border-radius:var(--radius);
+    padding:10px 10px;
+    text-align:center;
+    cursor:pointer;
+  }
+  .option[aria-pressed="true"]{
+    border-color:var(--accent);
+    background: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
+  }
+  .opt-icon{ color:var(--ink-soft); display:flex; justify-content:center; margin-bottom:4px; }
+  .option[aria-pressed="true"] .opt-icon{ color:var(--accent); }
+
+  .slider-readout{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+  .slider-value{
+    font-family:var(--font-label);
+    font-weight:700;
+    font-size:16px;
+    color:var(--accent);
+  }
+  input[type="range"]{
+    -webkit-appearance:none;
+    appearance:none;
+    width:100%;
+    height:6px;
+    border-radius:999px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-warm) var(--fill,8%), var(--tick-off) var(--fill,8%));
+    margin:2px 0;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    appearance:none;
+    width:20px;height:20px;
+    border-radius:50%;
+    background:var(--surface);
+    border:3px solid var(--accent);
+    box-shadow:0 2px 6px rgba(0,0,0,0.2);
+    cursor:pointer;
+  }
+  input[type="range"]::-moz-range-track{
+    height:6px;
+    border-radius:999px;
+    background:var(--tick-off);
+  }
+  input[type="range"]::-moz-range-progress{
+    height:6px;
+    border-radius:999px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-warm));
+  }
+  input[type="range"]::-moz-range-thumb{
+    width:14px;height:14px;
+    border-radius:50%;
+    background:var(--surface);
+    border:3px solid var(--accent);
+    cursor:pointer;
+  }
+  .slider-scale{
+    display:flex; justify-content:space-between;
+    font-family:var(--font-label);
+    font-size:10.5px;
+    color:var(--ink-soft);
+  }
+  .option .opt-title{ font-weight:600; font-size:13.5px; font-family:var(--font-body); }
+  .option .opt-sub{ font-family:var(--font-label); font-size:10.5px; color:var(--ink-soft); margin-top:2px; }
+
+  /* any row that holds buttons directly on the dark background sits on
+     its own soft, frosted bar — a translucent, blurred "mask" that lets
+     the big background star glow through a little brighter and softer
+     right behind the controls, instead of the buttons floating on flat
+     black. Purely a backdrop-filter, so it needs nothing from the star
+     itself and keeps working if the star's size or position ever changes. */
+  .nav-row, .player-actions-row{
+    display:flex;
+    gap:10px;
+    margin-top:4px;
+    background:rgba(243,242,237,0.05);
+    -webkit-backdrop-filter:blur(16px) brightness(1.3);
+    backdrop-filter:blur(16px) brightness(1.3);
+    border-radius:calc(var(--radius) + 6px);
+    padding:10px;
+    margin-left:-10px;
+    margin-right:-10px;
+  }
+  .btn{
+    border:none;
+    border-radius:var(--radius);
+    padding:13px 18px;
+    font-family:var(--font-body);
+    font-weight:600;
+    font-size:14.5px;
+    cursor:pointer;
+    transition:transform .12s ease, opacity .15s ease;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+  }
+  .btn:active{ transform:scale(.98); }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn-primary{ background:var(--accent); color:var(--accent-ink); flex:1; }
+  .btn-warm{ background:var(--accent-warm); color:var(--accent-warm-ink); flex:1; }
+  .btn-ghost{ background:var(--surface-2); color:var(--ink); border:1px solid var(--border); }
+  .btn-text{ background:none; color:var(--ink-soft); padding:13px 8px; }
+
+  /* on-air */
+  .onair-stage{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    min-height:200px;
+    transition:background .3s ease, border-color .3s ease;
+  }
+  .onair-stage.is-ready{
+    background:var(--accent-warm);
+    border-color:transparent;
+  }
+  .onair-tag-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .onair-topic-tag{
+    display:inline-flex; align-items:center; gap:6px;
+    font-family:var(--font-label); font-size:11px; font-weight:700;
+    letter-spacing:.04em; text-transform:uppercase;
+    color:var(--accent-warm-ink);
+  }
+  .onair-duration-tag{
+    font-family:var(--font-label); font-size:11px; font-weight:700;
+    letter-spacing:.04em;
+    background:rgba(255,255,255,.16);
+    color:var(--accent-warm-ink);
+    padding:4px 10px;
+    border-radius:999px;
+  }
+  .status-line{
+    font-family:var(--font-label);
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .onair-stage.is-ready .status-line{ color:rgba(255,255,255,.75); }
+  .status-dot{ width:7px;height:7px;border-radius:50%; background:var(--ink-soft); }
+  .onair-stage.is-ready .status-dot{ background:rgba(255,255,255,.6); }
+  .status-line.live .status-dot{ background:var(--accent-warm); box-shadow:0 0 0 0 var(--accent-warm); animation:pulse 1.4s infinite; }
+  .onair-stage.is-ready .status-line.live .status-dot{ background:var(--accent-warm-ink); }
+  @keyframes pulse{
+    0%{ box-shadow:0 0 0 0 color-mix(in srgb, var(--accent-warm) 55%, transparent); }
+    70%{ box-shadow:0 0 0 8px transparent; }
+    100%{ box-shadow:0 0 0 0 transparent; }
+  }
+
+  canvas#wave{ width:100%; height:56px; display:block; }
+
+  .script-text{
+    font-size:15px;
+    line-height:1.65;
+    color:var(--ink);
+    font-family:var(--font-body);
+  }
+  .onair-stage.is-ready .script-text{ color:var(--accent-warm-ink); }
+  .script-text .w{ transition:background .12s ease, color .12s ease; border-radius:3px; }
+  .script-text .w.active{ background:color-mix(in srgb, var(--accent-warm) 35%, transparent); }
+  .onair-stage.is-ready .script-text .w.active{ background:rgba(255,255,255,.28); }
+  .script-placeholder{ color:var(--ink-soft); font-style:italic; font-size:14px; }
+
+  .onair-scrub{ display:flex; flex-direction:column; gap:6px; }
+  .onair-scrub-track{ height:4px; border-radius:999px; background:rgba(255,255,255,.25); overflow:hidden; }
+  .onair-scrub-fill{ height:100%; width:0%; background:var(--accent-warm-ink); border-radius:999px; transition:width .15s linear; }
+  .onair-scrub-times{ display:flex; justify-content:space-between; font-family:var(--font-label); font-size:10.5px; color:rgba(255,255,255,.75); }
+
+  .player-controls{ display:flex; gap:16px; align-items:center; justify-content:center; }
+  .play-btn{
+    width:56px;height:56px;border-radius:50%;
+    background:var(--accent-warm-ink);
+    color:var(--accent-warm);
+    border:none;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    flex:none;
+  }
+  .transport-btn{
+    width:42px;height:42px;border-radius:50%;
+    background:rgba(255,255,255,.14);
+    color:var(--accent-warm-ink);
+    border:none;
+    display:flex;align-items:center;justify-content:center;
+    cursor:pointer;
+    flex:none;
+  }
+
+  .player-actions-row .btn{ flex:1; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .player-actions-row .btn.is-active{ border-color:var(--accent); color:var(--accent); }
+
+  .nextup-card{
+    display:flex; gap:12px; align-items:flex-start;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px;
+  }
+  .nextup-card .icon{ color:var(--ink-soft); margin-top:2px; }
+  .nextup-title{ font-weight:600; font-size:13.5px; margin-bottom:2px; }
+  .nextup-desc{ font-size:11.5px; color:var(--ink-soft); line-height:1.5; }
+
+  .done-note{
+    background:color-mix(in srgb, var(--accent) 10%, var(--surface-2));
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+    position:relative;
+    overflow:hidden;
+    isolation:isolate;
+  }
+  .done-note-content{
+    display:flex; flex-direction:column; gap:10px; align-items:flex-start;
+    position:relative;
+    z-index:1;
+  }
+  .done-note strong{ font-size:17px; font-family:var(--font-body); font-weight:600; }
+
+  .foot-note{ font-size:11.5px; color:var(--ink-soft); text-align:center; line-height:1.5; }
+
+
+  /* ---------- AI connection card ---------- */
+  .ai-card{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .ai-card .ai-title{ font-weight:600; font-size:13.5px; }
+  .ai-card .ai-sub{ font-size:12px; color:var(--ink-soft); line-height:1.5; }
+  .ai-summary{ display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12.5px; color:var(--ink-soft); }
+  .ai-summary strong{ color:var(--ink); font-weight:600; }
+  .ai-form{ display:flex; flex-direction:column; gap:10px; }
+  .ai-row{ display:flex; flex-direction:column; gap:6px; }
+  .ai-links{ display:flex; gap:14px; flex-wrap:wrap; align-items:center; }
+  .ai-links a{ color:var(--accent-warm); font-size:12.5px; font-weight:600; text-decoration:none; }
+  .ai-links a:hover{ text-decoration:underline; }
+  .ai-error{ font-size:12px; color:var(--accent-warm); line-height:1.4; }
+  input[type="password"]{
+    width:100%;
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--ink);
+    border-radius:var(--radius);
+    padding:12px 14px;
+    font-family:var(--font-label);
+    font-size:13.5px;
+    direction:ltr;
+    text-align:left;
+  }
+  .ai-card input[type="text"]{ background:var(--surface); direction:ltr; text-align:left; font-size:13px; }
+  .ai-card select{ background:var(--surface); }
+  .ai-card details summary{ font-size:12px; color:var(--ink-soft); cursor:pointer; }
+
+
+  /* ---------- welcome / connect modal ---------- */
+  .welcome-overlay{
+    position:fixed; inset:0; z-index:100;
+    background:rgba(0,0,0,.72);
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center;
+    padding:16px;
+  }
+  .welcome-overlay[hidden]{ display:none !important; }
+  .welcome-card{
+    width:100%; max-width:400px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:24px;
+    padding:26px 22px 22px;
+    box-shadow:var(--shadow);
+    display:flex; flex-direction:column; gap:14px;
+    position:relative; overflow:hidden;
+    font-family:var(--font-body);
+    color:var(--ink);
+  }
+  .welcome-card::before{
+    content:""; position:absolute; inset:0 0 auto 0; height:4px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-warm));
+  }
+  .welcome-card h2{ font-size:22px; line-height:1.15; }
+  .welcome-card p{ margin:0; font-size:14px; line-height:1.5; color:var(--ink-soft); }
+  .welcome-steps{ display:flex; flex-direction:column; gap:12px; }
+  .welcome-step{ display:flex; gap:12px; align-items:flex-start; }
+  .welcome-num{
+    flex:none; width:24px; height:24px; border-radius:50%;
+    background:var(--accent); color:var(--accent-ink);
+    font-family:var(--font-label); font-weight:700; font-size:12px;
+    display:flex; align-items:center; justify-content:center; margin-top:2px;
+  }
+  .welcome-step-body{ flex:1; display:flex; flex-direction:column; gap:8px; font-size:13.5px; }
+  .welcome-step-body .btn{ width:100%; }
+  .welcome-step-body input[type="password"]{ background:var(--surface-2); }
+  .welcome-msg{ font-size:12.5px; line-height:1.4; min-height:1em; }
+  .welcome-msg.err{ color:var(--accent-warm); }
+  .welcome-msg.ok{ color:var(--accent); }
+  .welcome-foot{ display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .welcome-foot .link-btn{ font-size:12.5px; }
+
+  [hidden]{ display:none !important; }
+
+  @media (max-width:400px){
+    .device{ padding:22px 16px 52px; border-radius:20px; }
+    .headline{ font-size:23px; }
+    .tt-logo{ width:150px; }
+  }
+</style>
+
+<div class="device" id="device">
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="focus-lightning" viewBox="0 0 24 24"><path d="M13 2 5.5 13h5L9.8 22 18.5 10h-5L13 2Z"/></symbol>
+    <symbol id="mindfulness-lotus" viewBox="0 0 24 24">
+      <path d="M12 20c-4.6 0-8-2.8-8-6.2 2.6.1 4.9 1.1 6.4 2.7"/>
+      <path d="M12 20c4.6 0 8-2.8 8-6.2-2.6.1-4.9 1.1-6.4 2.7"/>
+      <path d="M12 17.7c-2.3-1.6-3.8-4.1-3.8-6.9 1.4.3 2.7 1 3.8 2.1"/>
+      <path d="M12 17.7c2.3-1.6 3.8-4.1 3.8-6.9-1.4.3-2.7 1-3.8 2.1"/>
+      <path d="M12 13.1c-1.5-1.6-2.1-3.5-2-5.6 1.2.5 2.1 1.3 2.8 2.4"/>
+    </symbol>
+    <symbol id="money-bars" viewBox="0 0 24 24">
+      <path d="M4 20V11h3v9M10.5 20V6h3v14M17 20V3h3v17"/>
+      <path d="M2.5 20h19"/>
+    </symbol>
+    <symbol id="creativity-spark" viewBox="0 0 24 24">
+      <path d="m12 2 1.2 4.2L17 8l-3.8 1.8L12 14l-1.2-4.2L7 8l3.8-1.8L12 2Z"/>
+      <path d="m5 14 .8 2.7L8 18l-2.2 1.3L5 22l-.8-2.7L2 18l2.2-1.3L5 14Z"/>
+      <path d="m19 12 .7 2.2L22 15l-2.3.8L19 18l-.7-2.2L16 15l2.3-.8L19 12Z"/>
+    </symbol>
+    <symbol id="communication-chat" viewBox="0 0 24 24">
+      <path d="M4 5.5h16v11H9l-5 4v-15Z"/>
+      <path d="M8 10h.01M12 10h.01M16 10h.01"/>
+    </symbol>
+    <symbol id="health-heart" viewBox="0 0 24 24"><path d="M20.8 4.6a5.2 5.2 0 0 0-7.4 0L12 6l-1.4-1.4a5.2 5.2 0 1 0-7.4 7.4L12 20.8 20.8 12a5.2 5.2 0 0 0 0-7.4Z"/></symbol>
+    <symbol id="tech-laptop" viewBox="0 0 24 24">
+      <rect x="5" y="4" width="14" height="11" rx="1.5"/>
+      <path d="M3 19h18M8 19l1-4h6l1 4"/>
+    </symbol>
+    <symbol id="confidence-mountain" viewBox="0 0 24 24">
+      <path d="m3 20 7-13 4 7 2-4 5 10H3Z"/>
+      <path d="m9.2 8.5 1.5 2 1.4-1.5"/>
+    </symbol>
+    <symbol id="headphones" viewBox="0 0 24 24">
+      <path d="M4 13v-1a8 8 0 0 1 16 0v1"/>
+      <rect x="3" y="12" width="4" height="7" rx="2"/>
+      <rect x="17" y="12" width="4" height="7" rx="2"/>
+    </symbol>
+    <symbol id="car" viewBox="0 0 24 24">
+      <path d="m5 16-1-5 2-4h12l2 4-1 5"/>
+      <path d="M4 12h16"/>
+      <circle cx="7" cy="16.5" r="1.5"/><circle cx="17" cy="16.5" r="1.5"/>
+    </symbol>
+    <symbol id="dumbbell" viewBox="0 0 24 24"><path d="M7 8v8M4 10v4M17 8v8M20 10v4M7 12h10"/></symbol>
+    <symbol id="walk" viewBox="0 0 24 24">
+      <circle cx="13" cy="4" r="2"/>
+      <path d="m11 7-2 5 3 2 2-4 3 2"/>
+      <path d="m12 14-2 7M13 14l4 6M9 12 6 10"/>
+    </symbol>
+    <symbol id="home" viewBox="0 0 24 24">
+      <path d="m3 11 9-7 9 7"/>
+      <path d="M5 10v10h14V10M10 20v-6h4v6"/>
+    </symbol>
+    <symbol id="sun" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>
+    </symbol>
+    <symbol id="lunch" viewBox="0 0 24 24">
+      <path d="M4 14h16M6 14a6 6 0 0 1 12 0"/>
+      <path d="M12 5V3M3 18h18"/>
+    </symbol>
+    <symbol id="moon" viewBox="0 0 24 24"><path d="M20 15.5A8 8 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></symbol>
+    <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M14 7l5 5-5 5"/></symbol>
+    <symbol id="arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M10 7l-5 5 5 5"/></symbol>
+    <symbol id="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></symbol>
+    <symbol id="bookmark" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4V3Z"/></symbol>
+    <symbol id="share" viewBox="0 0 24 24">
+      <circle cx="18" cy="5" r="2"/><circle cx="6" cy="12" r="2"/><circle cx="18" cy="19" r="2"/>
+      <path d="m8 11 8-5M8 13l8 5"/>
+    </symbol>
+    <symbol id="rewind-15" viewBox="0 0 24 24">
+      <path d="M7 7H3v-4"/>
+      <path d="M4 7a8 8 0 1 1-1 7"/>
+      <path d="M9.5 11.2v3.6M9.5 11.2l-1 .8M14.5 11.2h2v3.6h-2"/>
+    </symbol>
+    <symbol id="forward-15" viewBox="0 0 24 24">
+      <path d="M17 7h4v-4"/>
+      <path d="M20 7a8 8 0 1 0 1 7"/>
+      <path d="M8.5 11.2v3.6M8.5 11.2l-1 .8M13.5 11.2h2v3.6h-2"/>
+    </symbol>
+    <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="spark-rays" viewBox="0 0 24 24"><path d="M5 19 8 15M13 8l2-5M17 12l4-2"/></symbol>
+    <symbol id="brand-star" viewBox="0 0 22.44 22.44"><path fill="currentColor" d="M8.41,5.71l.81-5.71h4l.81,5.71c.2,1.4,1.3,2.5,2.7,2.7l5.71.81v4l-5.71.81c-1.4.2-2.5,1.3-2.7,2.7l-.81,5.71h-4l-.81-5.71c-.2-1.4-1.3-2.5-2.7-2.7l-5.71-.81v-4l5.71-.81c1.4-.2,2.5-1.3,2.7-2.7Z"/></symbol>
+    <defs>
+      <!-- fed by --star-color, set on #device (a shared ancestor of this
+           sprite and the .brand-star-bg element below) so the same
+           gradient can be re-tinted per step without duplicating it. A
+           radial fade — solid at the centre, fully transparent at the
+           edge — turns the flat sparkle into a soft glow rather than a
+           crisp graphic. -->
+      <radialGradient id="starGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" style="stop-color:var(--star-color,var(--accent)); stop-opacity:1"/>
+        <stop offset="100%" style="stop-color:var(--star-color,var(--accent)); stop-opacity:0"/>
+      </radialGradient>
+    </defs>
+    <symbol id="brand-star-glow" viewBox="0 0 22.44 22.44"><path fill="url(#starGlow)" d="M8.41,5.71l.81-5.71h4l.81,5.71c.2,1.4,1.3,2.5,2.7,2.7l5.71.81v4l-5.71.81c-1.4.2-2.5,1.3-2.7,2.7l-.81,5.71h-4l-.81-5.71c-.2-1.4-1.3-2.5-2.7-2.7l-5.71-.81v-4l5.71-.81c1.4-.2,2.5-1.3,2.7-2.7Z"/></symbol>
+  </svg>
+
+  <svg class="brand-star-bg pos-right is-rising" id="brandStarBg" viewBox="0 0 22.44 22.44" aria-hidden="true" focusable="false"><use href="#brand-star-glow"></use></svg>
+
+  <div class="device-content">
+
+  <div class="brand">
+    <div style="flex:1;">
+      <svg class="tt-logo" viewBox="0 0 828.91 108.8" role="img" aria-label="TinyTune" focusable="false">
+        <style>
+          .tt-logo-letter{ fill:var(--ink); }
+          /* Matches the source file's own two-tone treatment (cream
+             letters, near-black face) instead of lime — lime-on-cream put
+             two light colors next to each other, so the little face inside
+             the U barely showed up. */
+          .tt-logo-spark{ fill:var(--bg); }
+        </style>
+        <path class="tt-logo-letter" d="M25.59,37.54H0V0h99.46v37.54h-25.59v69.73H25.59V37.54Z"/>
+        <path class="tt-logo-letter" d="M152.33,0v107.27h-48.27V0h48.27Z"/>
+        <path class="tt-logo-letter" d="M258.68,107.27l-51.49-37.24h-.46v37.24h-48.27V0h.61l51.18,37.09h.61V0h48.27v107.27h-.46Z"/>
+        <path class="tt-logo-letter" d="M368.4,0v.31l-28.2,58.23v48.73h-48.27v-48.73L263.74.31v-.31h104.67Z"/>
+        <path class="tt-logo-letter" d="M439.97,37.54h-25.59V0h99.46v37.54h-25.59v69.73h-48.27V37.54Z"/>
+        <path class="tt-logo-letter" d="M618.35,0v60.23c0,7.25-1.2,13.87-3.6,19.85-2.4,5.98-5.82,11.09-10.27,15.32-4.44,4.24-9.76,7.54-15.94,9.88-6.18,2.35-13.05,3.52-20.61,3.52s-14.43-1.18-20.61-3.52c-6.18-2.35-11.47-5.64-15.86-9.88-4.39-4.24-7.79-9.35-10.19-15.32-2.4-5.98-3.6-12.59-3.6-19.85V0h100.68Z"/>
+        <path class="tt-logo-letter" d="M723.93,107.27l-51.49-37.24h-.46v37.24h-48.27V0h.61l51.18,37.09h.61V0h48.27v107.27h-.46Z"/>
+        <path class="tt-logo-letter" d="M828.91,0v37.54h-50.11v.61l48.27,18.85v9.96h-48.27v.61l50.11,20.54v19.16h-98.38V0h98.38Z"/>
+        <rect class="tt-logo-spark" x="566.78" y="38.49" width="13.21" height="27.71" rx="6.6" ry="6.6"/>
+        <rect class="tt-logo-spark" x="594.75" y="38.49" width="13.21" height="27.71" rx="6.6" ry="6.6"/>
+        <path class="tt-logo-spark" d="M533.96,14.71l.81-5.71h4l.81,5.71c.2,1.4,1.3,2.5,2.7,2.7l5.71.81v4l-5.71.81c-1.4.2-2.5,1.3-2.7,2.7l-.81,5.71h-4l-.81-5.71c-.2-1.4-1.3-2.5-2.7-2.7l-5.71-.81v-4l5.71-.81c1.4-.2,2.5-1.3,2.7-2.7Z"/>
+      </svg>
+      <div class="brand-tag" data-i18n="brandTag">Tiny idea. Big rabbit hole.</div>
+    </div>
+    <div class="lang-toggle" id="langToggle" role="group" aria-label="Language">
+      <button type="button" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-lang="he" aria-pressed="false">עב</button>
+    </div>
+  </div>
+
+  <div class="dial" id="dial">
+    <div class="dial-step active" data-step="topic"><div class="dial-tick"></div><div class="dial-label" data-i18n="dialTopic">Tune In</div></div>
+    <div class="dial-step" data-step="rhythm"><div class="dial-tick"></div><div class="dial-label" data-i18n="dialRhythm">Frequency</div></div>
+    <div class="dial-step" data-step="onair"><div class="dial-tick"></div><div class="dial-label" data-i18n="dialOnAir">On Air</div></div>
+  </div>
+
+  <!-- STEP 1: TOPIC -->
+  <section class="panel" id="panel-topic">
+    <div class="panel-head">
+      <div class="eyebrow" data-i18n="step1">STEP 01</div>
+      <h2 class="headline" data-i18n="topicHeadline">What are you into today?</h2>
+      <p class="sub" data-i18n="topicSub">Pick one or two, or just type your own. This shapes every spark TinyTune writes for you.</p>
+    </div>
+
+    <div class="chip-grid chip-grid-2col" id="topicChips" role="group" aria-label="Topic options"></div>
+
+    <div>
+      <label class="field-label" for="customTopic" data-i18n="customTopicLabel">Or your own topic</label>
+      <div style="height:8px"></div>
+      <div class="input-with-icon">
+        <svg class="icon"><use href="#search"></use></svg>
+        <input type="text" id="customTopic" placeholder="e.g. negotiating salary, birdwatching, stoicism…" maxlength="60" />
+      </div>
+    </div>
+
+    <div class="surprise-row">
+      <button class="link-btn" id="surpriseBtn" type="button" data-i18n="surprise">Surprise me</button>
+    </div>
+
+    <div class="rhythm-group">
+      <label class="field-label" data-i18n="whereLabel">Where do you usually listen?</label>
+      <div class="chip-grid" id="locationChips" role="group" aria-label="Listening context"></div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-primary" id="toRhythmBtn" disabled data-i18n="nextFrequency">Next: Frequency →</button>
+    </div>
+  </section>
+
+  <!-- STEP 2: RHYTHM -->
+  <section class="panel" id="panel-rhythm" hidden>
+    <div class="panel-head">
+      <div class="eyebrow" data-i18n="step2">STEP 02</div>
+      <h2 class="headline" data-i18n="rhythmHeadline">Set your frequency</h2>
+      <p class="sub" data-i18n="rhythmSub">How long, how often, and when TinyTune should reach you.</p>
+    </div>
+
+    <div class="rhythm-group">
+      <label class="field-label" for="durationSlider" data-i18n="tuneLength">Tune length</label>
+      <div class="slider-readout">
+        <span class="slider-value" id="durationValue">5 min</span>
+        <span class="sub" id="durationWords" style="margin:0;">~700 words</span>
+      </div>
+      <input type="range" id="durationSlider" min="1" max="60" step="1" value="5" />
+      <div class="slider-scale"><span data-i18n="min1">1 min</span><span data-i18n="min60">60 min</span></div>
+    </div>
+
+    <div class="rhythm-group">
+      <label class="field-label" data-i18n="timesPerWeek">Times per week</label>
+      <div class="option-row" id="freqOptions" role="group" aria-label="Frequency"></div>
+    </div>
+
+    <div class="rhythm-group">
+      <label class="field-label" data-i18n="preferredTimes">Preferred times</label>
+      <div class="option-row" id="timePresets" role="group" aria-label="Quick-add time"></div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="time" id="customTimeInput" value="08:15" style="flex:1" />
+        <button class="btn btn-ghost" id="addTimeBtn" type="button" style="flex:none; padding:12px 16px; display:flex; align-items:center; gap:6px;">
+          <svg class="icon icon-sm"><use href="#plus"></use></svg><span data-i18n="addBtn">Add</span>
+        </button>
+      </div>
+      <div class="chip-grid" id="selectedTimes" role="list" aria-label="Your times" style="margin-top:2px;"></div>
+    </div>
+
+    <div class="rhythm-group">
+      <label class="field-label" data-i18n="styleLabel">Style</label>
+      <div class="option-row" id="styleOptions" role="group" aria-label="Style"></div>
+    </div>
+
+    <div class="rhythm-group" id="voiceGroup">
+      <label class="field-label" for="voiceSelect" data-i18n="voiceLabel">Voice</label>
+      <div id="voiceControls" style="display:flex; gap:8px; align-items:center;">
+        <select id="voiceSelect" style="flex:1"></select>
+        <button class="btn btn-ghost" id="previewVoiceBtn" type="button" style="flex:none; padding:12px 16px;"><span data-i18n="previewBtn">Preview</span></button>
+      </div>
+      <div class="voice-warning" id="voiceWarning" hidden></div>
+      <div class="voice-warning" id="previewNoSoundWarning" hidden></div>
+      <div class="voice-warning" id="noSpeechSupportMsg" hidden></div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-ghost" id="backToTopicBtn" type="button" data-i18n="back">Back</button>
+      <button class="btn btn-primary" id="toOnAirBtn" type="button" disabled data-i18n="nextOnAir">Next: Go On Air →</button>
+    </div>
+  </section>
+
+  <!-- STEP 3: ON AIR -->
+  <section class="panel" id="panel-onair" hidden>
+    <div class="panel-head">
+      <div class="eyebrow" data-i18n="step3">STEP 03</div>
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <h2 class="headline" id="onAirHeadline" data-i18n="onAirHeadline">Your spark is ready</h2>
+        <span class="level-badge" id="levelBadge" hidden></span>
+      </div>
+      <p class="sub" id="onAirSub" data-i18n="onAirSubDefault">A short, curious listen — made just for you.</p>
+    </div>
+
+    <div class="onair-stage" id="onairStage">
+      <div class="onair-tag-row" id="onairTagRow" hidden>
+        <span class="onair-topic-tag">
+          <svg class="icon icon-sm" id="onairTopicIcon"><use href="#spark-rays"></use></svg>
+          <span id="onairTopicTagText"></span>
+        </span>
+        <span class="onair-duration-tag" id="onairDurationTag">5 MIN</span>
+      </div>
+      <div class="status-line" id="statusLine"><span class="status-dot"></span><span id="statusText" data-i18n="standingBy">Standing by</span></div>
+      <canvas id="wave" width="600" height="112"></canvas>
+      <div class="script-text" id="scriptText"><span class="script-placeholder" data-i18n="scriptPlaceholder">Tap "Generate my spark" to write today's segment.</span></div>
+      <div class="onair-scrub" id="onairScrub" hidden>
+        <div class="onair-scrub-track"><div class="onair-scrub-fill" id="scrubFill"></div></div>
+        <div class="onair-scrub-times"><span id="scrubElapsed">0:00</span><span id="scrubRemaining">-0:00</span></div>
+      </div>
+      <div id="playerRow" class="player-controls" hidden>
+        <button class="transport-btn" id="rewindBtn" type="button" aria-label="Back 15 seconds"><svg class="icon"><use href="#rewind-15"></use></svg></button>
+        <button class="play-btn" id="playBtn" type="button" aria-label="Play"><svg class="icon icon-fill"><use href="#play"></use></svg></button>
+        <button class="transport-btn" id="forwardBtn" type="button" aria-label="Forward 15 seconds"><svg class="icon"><use href="#forward-15"></use></svg></button>
+      </div>
+    </div>
+
+    <div class="voice-warning" id="noSoundBanner" hidden></div>
+    <div class="voice-warning" id="demoNote" hidden></div>
+
+    <div id="generateRow">
+      <button class="btn btn-warm" id="generateBtn" type="button" style="width:100%">
+        <svg class="icon icon-sm icon-fill"><use href="#brand-star"></use></svg><span data-i18n="generateBtn">Generate my spark</span>
+      </button>
+    </div>
+
+    <div class="ai-card" id="aiCard">
+      <div class="ai-title" data-i18n="aiTitle">Connect your AI</div>
+      <div class="ai-summary" id="aiSummary" hidden>
+        <span id="aiSummaryText"></span>
+        <button class="link-btn" id="aiChangeBtn" type="button"></button>
+      </div>
+      <div class="ai-form" id="aiForm">
+        <div class="ai-sub" data-i18n="aiSub">TinyTune writes your sparks with an AI you already have. Pick one and paste your key. It stays in this browser and is only sent to that AI company.</div>
+        <div class="ai-row">
+          <label class="field-label" for="aiProvider" data-i18n="aiProviderLabel">AI</label>
+          <select id="aiProvider"></select>
+        </div>
+        <div class="ai-row">
+          <label class="field-label" for="aiKey" data-i18n="aiKeyLabel">API key</label>
+          <input type="password" id="aiKey" autocomplete="off" autocapitalize="off" spellcheck="false" />
+        </div>
+        <details>
+          <summary data-i18n="aiAdvanced">Advanced: model name</summary>
+          <div class="ai-row" style="margin-top:8px;">
+            <input type="text" id="aiModel" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          </div>
+        </details>
+        <div class="ai-links">
+          <a id="aiGetKey" href="#" target="_blank" rel="noopener noreferrer"></a>
+        </div>
+        <div class="ai-error" id="aiError" hidden></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-primary" id="aiSaveBtn" type="button" style="flex:1" data-i18n="aiSave">Save and connect</button>
+          <button class="btn btn-ghost" id="aiDemoBtn" type="button" style="flex:none" data-i18n="aiDemo">Hear a demo</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="playerActionsRow" class="player-actions-row" hidden>
+      <button class="btn btn-ghost" id="saveBtn" type="button"><svg class="icon icon-sm"><use href="#bookmark"></use></svg><span data-i18n="saveBtn">Save</span></button>
+      <button class="btn btn-ghost" id="shareBtn" type="button"><svg class="icon icon-sm"><use href="#share"></use></svg><span data-i18n="shareBtn">Share</span></button>
+    </div>
+
+    <div id="playerSecondaryRow" class="nav-row" hidden>
+      <button class="btn btn-ghost" id="anotherBtn" type="button" data-i18n="anotherBtn">Try a different perspective</button>
+      <button class="btn btn-ghost" id="doneBtn" type="button" data-i18n="doneBtn">Done</button>
+    </div>
+
+    <div class="done-note" id="doneNote" hidden>
+      <div class="done-note-content">
+        <strong data-i18n="doneTitle">Nice! You're on a roll.</strong>
+        <span class="sub" style="margin:0;" id="doneSub"></span>
+        <button class="btn btn-primary" id="restartBtn" type="button" data-i18n="restartBtn">Start a new spark</button>
+      </div>
+    </div>
+
+    <div class="nextup-card">
+      <svg class="icon icon-lg"><use href="#headphones"></use></svg>
+      <div>
+        <div class="nextup-title" data-i18n="nextUpTitle">Next up: your audio</div>
+        <div class="nextup-desc" data-i18n="footNote">Prototype: this generates and reads one spark live in your browser. Scheduled delivery to your phone's own podcast/notification feed is the next build step.</div>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button class="btn btn-text" id="backToRhythmBtn" type="button" data-i18n="changeFrequency">← Change frequency</button>
+    </div>
+  </section>
+
+  </div>
+
+</div>
+
+<div class="welcome-overlay" id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" hidden>
+  <div class="welcome-card">
+    <h2 id="welcomeTitle" data-i18n="wTitle">One quick step before you start</h2>
+    <p data-i18n="wBody">TinyTune writes your daily spark with an AI. Connecting takes about a minute, and Google Gemini is free.</p>
+    <div class="welcome-steps">
+      <div class="welcome-step">
+        <span class="welcome-num">1</span>
+        <div class="welcome-step-body">
+          <a class="btn btn-primary" id="welcomeGetKey" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="text-decoration:none" data-i18n="wStep1">Get my free key</a>
+          <span class="sub" style="font-size:12.5px;margin:0;" data-i18n="wStep1Hint">Sign in with Google and press “Create API key”.</span>
+        </div>
+      </div>
+      <div class="welcome-step">
+        <span class="welcome-num">2</span>
+        <div class="welcome-step-body">
+          <span data-i18n="wStep2">Copy the key it shows you.</span>
+        </div>
+      </div>
+      <div class="welcome-step">
+        <span class="welcome-num">3</span>
+        <div class="welcome-step-body">
+          <input type="password" id="welcomeKey" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <button class="btn btn-ghost" id="welcomePasteBtn" type="button" data-i18n="wPasteBtn">Paste from clipboard</button>
+          <div class="welcome-msg" id="welcomeMsg" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+    <div class="welcome-foot">
+      <span class="sub" style="font-size:12px;margin:0;text-align:center;" data-i18n="wOther">Have an OpenAI or Claude key instead? Paste it the same way, TinyTune detects which one it is.</span>
+      <button class="link-btn" id="welcomeSkip" type="button" data-i18n="wSkip">Skip and hear a demo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const TOPICS = [
+    {id:'focus', en:'Focus & Productivity', he:'ריכוז ופרודוקטיביות', icon:'focus-lightning'},
+    {id:'mindfulness', en:'Mindfulness', he:'מיינדפולנס', icon:'mindfulness-lotus'},
+    {id:'money', en:'Money & Finance', he:'כסף ופיננסים', icon:'money-bars'},
+    {id:'creativity', en:'Creativity', he:'יצירתיות', icon:'creativity-spark'},
+    {id:'communication', en:'Communication', he:'תקשורת בין-אישית', icon:'communication-chat'},
+    {id:'health', en:'Health & Energy', he:'בריאות ואנרגיה', icon:'health-heart'},
+    {id:'tech', en:'Tech & Tools', he:'טכנולוגיה וכלים', icon:'tech-laptop'},
+    {id:'confidence', en:'Confidence', he:'ביטחון עצמי', icon:'confidence-mountain'},
+  ];
+  const WORDS_PER_MINUTE = 140;
+  const FREQS = [
+    {id:'3x', en:'3x/week', he:'3 בשבוע'},
+    {id:'5x', en:'5x/week', he:'5 בשבוע'},
+    {id:'daily', en:'Every day', he:'כל יום'},
+  ];
+  const TIME_PRESETS = [
+    {en:'Morning', he:'בוקר', time:'08:00', icon:'sun'},
+    {en:'Lunch break', he:'הפסקת צהריים', time:'12:30', icon:'lunch'},
+    {en:'Evening', he:'ערב', time:'17:30', icon:'clock'},
+    {en:'Night wind-down', he:'לפני השינה', time:'21:00', icon:'moon'},
+  ];
+  // A one-time preference, not a per-spark question — set alongside the
+  // voice and left alone. Keeps the daily "generate → listen" loop exactly
+  // as fast as it is today while still letting people tune how it sounds.
+  const STYLE_MODES = [
+    {
+      id:'podcast', en:'Podcast', he:'פודקאסט', dialogue:true,
+      subEn:'Two hosts, casual chat', subHe:'שני מנחים, שיחה קלילה',
+      instruction:`Format & tone: a real two-host podcast conversation between Host A and Host B — not a monologue. They riff off each other: react, agree, push back a little, finish each other's thoughts, ask each other quick questions. Casual, warm, contractions, occasional asides — never scripted-sounding, never a lecture in disguise.
+Formatting requirement (critical, follow exactly): write EVERY line as its own line starting with "A:" or "B:" (a bare capital letter, colon, space, then that line's words) — nothing else on the line. Alternate naturally as real co-hosts do (not necessarily strict turn-by-turn — a host can get two short lines in a row if that's how the beat lands), aim for short, punchy lines (one thought each) so the back-and-forth feels alive, and use 8–16 lines total. Never write "Host A", "Host B", their names, or any other label — only the bare "A:" / "B:" prefix at the start of each line.`,
+    },
+    {
+      id:'ted', en:'TED Talk', he:'הרצאת TED', dialogue:false,
+      subEn:'Polished, big-idea', subHe:'מלוטש ורעיון גדול',
+      instruction:`Format & tone: TED-talk style, ONE speaker only. Open by framing the bigger stakes or a striking claim, build toward one clear "big idea," and use a more polished, rhetorical rhythm — short punchy sentences mixed with a few longer ones for emphasis. Still spoken and human, like a confident speaker on a stage, never stiff or academic.`,
+    },
+  ];
+  const LOCATIONS = [
+    {id:'anywhere', en:'Anywhere', he:'בכל מקום', phrase:"a few quiet minutes, wherever they happen to be", icon:'headphones'},
+    {id:'commute', en:'Commute / traffic', he:'נסיעה / פקק', phrase:'a commute or a traffic jam', icon:'car'},
+    {id:'gym', en:'Gym workout', he:'אימון בחדר כושר', phrase:'a workout at the gym', icon:'dumbbell'},
+    {id:'walk', en:'A walk', he:'הליכה', phrase:'a walk', icon:'walk'},
+    {id:'home', en:'Home / chores', he:'בבית / מטלות', phrase:'chores or downtime at home', icon:'home'},
+  ];
+
+  const STRINGS = {
+    en: {
+      brandTag:'Tiny idea. Big rabbit hole.',
+      dialTopic:'Tune In', dialRhythm:'Frequency', dialOnAir:'On Air',
+      step1:'STEP 01', topicHeadline:"What are you into today?",
+      topicSub:'Pick one or two, or just type your own. This shapes every spark TinyTune writes for you.',
+      customTopicLabel:'Or your own topic', customTopicPlaceholder:'e.g. negotiating salary, birdwatching, stoicism…',
+      surprise:'Surprise me', whereLabel:'Where do you usually listen?', nextFrequency:'Next: Frequency →',
+      step2:'STEP 02', rhythmHeadline:'Set your frequency', rhythmSub:'How long, how often, and when TinyTune should reach you.',
+      tuneLength:'Tune length', min1:'1 min', min60:'60 min', words:'words', minAbbrev:'MIN',
+      timesPerWeek:'Times per week', preferredTimes:'Preferred times', addBtn:'Add',
+      noTimesHint:'No times yet — pick one above or add your own.',
+      styleLabel:'Style',
+      voiceLabel:'Voice', previewBtn:'Preview',
+      voiceWarning:'No Hebrew voice found on this device — content will still be written in Hebrew, pick any voice below to hear it read.',
+      back:'Back', nextOnAir:'Next: Go On Air →',
+      step3:'STEP 03', onAirHeadline:'Your spark is ready', onAirSubDefault:'A short, curious listen — made just for you.',
+      standingBy:'Standing by', writing:'Writing your spark…', rewriting:'Rewriting…', readyToPlay:'Ready to play', onAir:'On air',
+      unavailable:'Unavailable', audioUnsupported:'Audio not supported in this browser',
+      scriptPlaceholder:'Tap "Generate my spark" to write today’s segment.',
+      generateBtn:'Generate my spark', anotherBtn:'Try a different perspective', doneBtn:'Done',
+      doneTitle:"Nice! You're on a roll.", doneSubPrefix:'Curiosity looks good on you — that\'s one more spark banked on',
+      restartBtn:'Start a new spark', changeFrequency:'← Change frequency',
+      footNote:"Prototype: this generates and reads one spark live in your browser. Scheduled delivery to your phone's own podcast/notification feed is the next build step.",
+      nextUpTitle:'Next up: your audio',
+      saveBtn:'Save', shareBtn:'Share', copiedToClipboard:'Copied to clipboard',
+      demoNote:'Demo spark — a ready-made sample so you can try the voices and player. Live, personalized sparks need Claude: open this link while signed in at claude.ai.',
+      aiTitle:'Connect your AI',
+      aiSub:'TinyTune writes your sparks with an AI you already have. Pick one and paste your key. It stays in this browser and is only sent to that AI company.',
+      aiProviderLabel:'AI', aiKeyLabel:'API key', aiAdvanced:'Advanced: model name',
+      aiSave:'Save and connect', aiDemo:'Hear a demo', aiChange:'Change', aiUseOwn:'Use my own key',
+      aiDisconnect:'Disconnect', aiConnectedTo:'Connected to', aiUsingClaude:'Using Claude automatically',
+      aiKeyPlaceholder:'Paste your key here', aiGetKeyPrefix:'Get a key:',
+      aiNeedConnect:'Connect an AI below to write your spark. (A free Gemini key takes about a minute.)',
+      aiEnterKey:'Paste your API key first.',
+      aiBadKey:'That key was not accepted. Check it was copied fully and try again.',
+      aiBadModel:'That model name was not found. Open "Advanced" and enter a current model name.',
+      aiNetwork:'Could not reach the AI service. Check your connection and try again.',
+      aiNoCredit:'This key has no credit or has hit its limit. OpenAI and Claude API keys need prepaid credit (a few dollars) in your account. Gemini has a free tier.',
+      aiBusy:'The AI service is very busy right now. Wait a few seconds and press Generate again.',
+      wTitle:'One quick step before you start',
+      wBody:'TinyTune writes your daily spark with an AI. Connecting takes about a minute, and Google Gemini is free.',
+      wStep1:'Get my free key', wStep1Hint:'Sign in with Google and press “Create API key”.',
+      wStep2:'Copy the key it shows you.',
+      wKeyPlaceholder:'Paste the key here, it connects by itself',
+      wOther:'Have an OpenAI or Claude key instead? Paste it the same way, TinyTune detects which one it is.',
+      wSkip:'Skip and hear a demo',
+      wChecking:'Checking your key…', wBadFormat:'That does not look like an API key. Copy the whole key and paste it again.',
+      wDone:'Connected! Pick a topic to start.',
+      wWaiting:'Create the key in the window that opened, copy it, then come back here. TinyTune picks it up by itself.',
+      wPasteBtn:'Paste from clipboard', wNoClip:'Could not read the clipboard. Paste the key into the box instead.',
+      capabilityMissing:'Generating needs "Ask Claude", which isn’t available right now. Make sure you’re signed in to Claude (claude.ai) in this browser, then reload this page and try again.',
+      notGranted:'This preview needs permission to ask Claude — try tapping Generate again.',
+      rateLimited:"That's a lot of sparks — give it a few seconds and try again.",
+      genericError:"Couldn't write your spark just now — try again in a moment.",
+      todaysSpark:"today's spark",
+      noSoundWarning:"No sound played — this device likely has no voice installed for this language. Check your phone's text-to-speech settings, or try a different voice above.",
+      noSpeechSupport:"Playback isn't available in this in-app view. Open this page in your regular browser (like Chrome) — look for a menu icon (⋮ or ⤢) and \"Open in browser\" — to hear your spark read aloud.",
+      surprisePick: null,
+    },
+    he: {
+      brandTag:'רעיון קטן. סקרנות ענקית.',
+      dialTopic:'בחירת נושא', dialRhythm:'תדירות', dialOnAir:'משדרים',
+      step1:'שלב 01', topicHeadline:'במה בא לך להתעניין היום?',
+      topicSub:'בחר נושא אחד או שניים, או פשוט תכתוב משהו משלך. זה מעצב כל טעימה שTinyTune כותבת בשבילך.',
+      customTopicLabel:'או נושא משלך', customTopicPlaceholder:'למשל: משא ומתן על שכר, צפרות, סטואיציזם…',
+      surprise:'תפתיעו אותי', whereLabel:'איפה בדרך כלל תאזין?', nextFrequency:'← הבא: תדירות',
+      step2:'שלב 02', rhythmHeadline:'קבע את התדירות שלך', rhythmSub:'כמה זמן, כמה פעמים, ומתי TinyTune תגיע אליך.',
+      tuneLength:'אורך הטעימה', min1:'דקה אחת', min60:'60 דקות', words:'מילים', minAbbrev:'דק׳',
+      timesPerWeek:'פעמים בשבוע', preferredTimes:'שעות מועדפות', addBtn:'הוספה',
+      noTimesHint:'עדיין אין שעות — בחר אחת למעלה או הוסף שעה משלך.',
+      styleLabel:'סגנון',
+      voiceLabel:'קול', previewBtn:'השמעה לדוגמה',
+      voiceWarning:'לא נמצא קול בעברית במכשיר הזה — התוכן עדיין ייכתב בעברית, אפשר לבחור כל קול למטה כדי לשמוע הקראה.',
+      back:'חזרה', nextOnAir:'← הבא: לשידור',
+      step3:'שלב 03', onAirHeadline:'הטעימה שלך מוכנה', onAirSubDefault:'האזנה קצרה וסקרנית — בדיוק בשבילך.',
+      standingBy:'ממתין', writing:'כותב את הטעימה שלך…', rewriting:'כותב מחדש…', readyToPlay:'מוכן להשמעה', onAir:'בשידור',
+      unavailable:'לא זמין', audioUnsupported:'שמע לא נתמך בדפדפן הזה',
+      scriptPlaceholder:'לחץ על "צור לי טעימה" כדי לכתוב את הקטע של היום.',
+      generateBtn:'צור לי טעימה', anotherBtn:'לנסות זווית אחרת', doneBtn:'סיימתי',
+      doneTitle:'מעולה! זה מתגלגל.', doneSubPrefix:'הסקרנות מחמיאה לך — עוד טעימה אחת נצברה בכיוון',
+      restartBtn:'טעימה חדשה', changeFrequency:'→ שינוי תדירות',
+      footNote:'פרוטוטייפ: זה כותב ומקריא טעימה אחת בזמן אמת בדפדפן שלך. משלוח מתוזמן לפיד פודקאסט/התראות בטלפון הוא צעד הפיתוח הבא.',
+      nextUpTitle:'הבא בתור: השמע שלך',
+      saveBtn:'שמירה', shareBtn:'שיתוף', copiedToClipboard:'הועתק ללוח',
+      demoNote:'טעימת הדגמה — דוגמה מוכנה כדי לנסות את הקולות והנגן. טעימות אישיות בזמן אמת דורשות Claude: פתח את הלינק כשאתה מחובר ל-claude.ai.',
+      aiTitle:'חבר את ה-AI שלך',
+      aiSub:'TinyTune כותבת את הטעימות עם AI שכבר יש לך. בחר אחד והדבק את המפתח. המפתח נשאר בדפדפן הזה ונשלח רק לחברת ה-AI.',
+      aiProviderLabel:'AI', aiKeyLabel:'מפתח API', aiAdvanced:'מתקדם: שם המודל',
+      aiSave:'שמירה וחיבור', aiDemo:'שמיעת הדגמה', aiChange:'שינוי', aiUseOwn:'להשתמש במפתח משלי',
+      aiDisconnect:'ניתוק', aiConnectedTo:'מחובר אל', aiUsingClaude:'משתמש ב-Claude אוטומטית',
+      aiKeyPlaceholder:'הדבק כאן את המפתח', aiGetKeyPrefix:'לקבלת מפתח:',
+      aiNeedConnect:'חבר AI למטה כדי לכתוב את הטעימה. (מפתח חינמי של Gemini לוקח בערך דקה.)',
+      aiEnterKey:'הדבק קודם את מפתח ה-API.',
+      aiBadKey:'המפתח לא התקבל. ודא שהעתקת אותו במלואו ונסה שוב.',
+      aiBadModel:'שם המודל לא נמצא. פתח "מתקדם" והכנס שם מודל עדכני.',
+      aiNetwork:'לא הצלחתי להגיע לשירות ה-AI. בדוק את החיבור ונסה שוב.',
+      aiNoCredit:'למפתח הזה אין קרדיט או שהוא הגיע למגבלה. מפתחות של OpenAI ושל Claude דורשים קרדיט בתשלום מראש (כמה דולרים) בחשבון. ל-Gemini יש שכבה חינמית.',
+      aiBusy:'שירות ה-AI עמוס מאוד כרגע. חכה כמה שניות ולחץ שוב על צור לי טעימה.',
+      wTitle:'צעד קטן לפני שמתחילים',
+      wBody:'TinyTune כותבת את הטעימה היומית שלך בעזרת AI. החיבור לוקח בערך דקה, ו-Google Gemini בחינם.',
+      wStep1:'קבלת מפתח חינמי', wStep1Hint:'היכנס עם Google ולחץ על “Create API key”.',
+      wStep2:'העתק את המפתח שמופיע.',
+      wKeyPlaceholder:'הדבק כאן את המפתח, והחיבור קורה לבד',
+      wOther:'יש לך מפתח של OpenAI או של Claude? הדבק אותו באותה צורה, TinyTune מזהה לבד איזה זה.',
+      wSkip:'דלג ושמע הדגמה',
+      wChecking:'בודק את המפתח…', wBadFormat:'זה לא נראה כמו מפתח API. העתק את המפתח המלא והדבק שוב.',
+      wDone:'מחובר! בחר נושא ומתחילים.',
+      wWaiting:'צור את המפתח בחלון שנפתח, העתק אותו וחזור לכאן. TinyTune תתפוס אותו לבד.',
+      wPasteBtn:'הדבקה מהלוח', wNoClip:'לא הצלחתי לקרוא את הלוח. הדבק את המפתח בתיבה.',
+      capabilityMissing:'היצירה דורשת את היכולת "לשאול את קלוד" שלא זמינה כרגע. ודא שאתה מחובר ל-Claude (claude.ai) באותו דפדפן, רענן את הדף ונסה שוב.',
+      notGranted:'הפרוטוטייפ הזה זקוק להרשאה לשאול את קלוד — נסה ללחוץ שוב על "צור".',
+      rateLimited:'יותר מדי טעימות בבת אחת — המתן כמה שניות ונסה שוב.',
+      genericError:'לא הצלחתי לכתוב את הטעימה כרגע — נסה שוב בעוד רגע.',
+      todaysSpark:'הטעימה של היום',
+      noSoundWarning:'לא נשמע קול — כנראה שאין במכשיר הזה קול מותקן לשפה הזו. בדוק בהגדרות הטלפון את הגדרות ההקראה (Text-to-Speech), או נסה קול אחר למעלה.',
+      noSpeechSupport:'ההשמעה לא זמינה בתצוגה הפנימית הזו. פתח את הדף בדפדפן הרגיל שלך (כמו Chrome) — חפש סמל תפריט (⋮ או ⤢) ואפשרות "פתח בדפדפן" — כדי לשמוע את הטעימה מוקראת.',
+      surprisePick: null,
+    },
+  };
+
+  const state = {
+    step: 'topic',
+    language: 'en',
+    topics: new Set(),
+    customTopic: '',
+    location: 'anywhere',
+    durationMinutes: 5,
+    freq: '5x',
+    times: ['08:00'],
+    voiceURI: null,
+    styleMode: 'podcast',
+    script: '',
+    segments: [{speaker:'A', text:'', start:0, end:0}],
+    words: [],
+    wordSpans: [],
+    lastElapsedCharOffset: 0,
+    generating: false,
+    speaking: false,
+    done: false,
+    topicProgress: {},
+  };
+
+  const $ = (sel) => document.querySelector(sel);
+  const topicChipsEl = $('#topicChips');
+  const durationSliderEl = $('#durationSlider');
+  const freqOptionsEl = $('#freqOptions');
+  const styleOptionsEl = $('#styleOptions');
+  const timePresetsEl = $('#timePresets');
+  const selectedTimesEl = $('#selectedTimes');
+  const locationChipsEl = $('#locationChips');
+
+  function T(key){
+    return (STRINGS[state.language] && STRINGS[state.language][key]) || STRINGS.en[key] || key;
+  }
+
+  function applyStrings(){
+    document.querySelectorAll('[data-i18n]').forEach(el=>{
+      el.textContent = T(el.getAttribute('data-i18n'));
+    });
+    $('#customTopic').placeholder = T('customTopicPlaceholder');
+    renderAICard();
+    if(typeof renderWelcome === 'function') renderWelcome();
+  }
+
+  function resetOnAirUI(){
+    $('#playerRow').hidden = true;
+    $('#playerActionsRow').hidden = true;
+    $('#playerSecondaryRow').hidden = true;
+    $('#onairTagRow').hidden = true;
+    $('#onairStage').classList.remove('is-ready');
+    $('#onairScrub').hidden = true;
+    $('#doneNote').hidden = true;
+    $('#generateRow').hidden = false;
+    $('#levelBadge').hidden = true;
+    $('#noSoundBanner').hidden = true;
+    $('#demoNote').hidden = true;
+    savedThisSpark = false;
+    $('#saveBtn').classList.remove('is-active');
+  }
+
+  function setLanguage(lang){
+    if(state.language === lang) return;
+    state.language = lang;
+    const deviceEl = $('#device');
+    deviceEl.setAttribute('dir', lang === 'he' ? 'rtl' : 'ltr');
+    deviceEl.setAttribute('lang', lang === 'he' ? 'he' : 'en');
+    document.querySelectorAll('#langToggle button').forEach(b=>{
+      b.setAttribute('aria-pressed', b.dataset.lang === lang ? 'true' : 'false');
+    });
+    applyStrings();
+    renderChips();
+    renderLocationChips();
+    renderFreqs();
+    renderStyleModes();
+    renderTimePresets();
+    renderSelectedTimes();
+    updateDurationReadout();
+    populateVoices();
+    // a script already on screen was written in the other language — reset to a clean slate
+    if(state.script){
+      state.script=''; state.wordSpans=[]; state.segments=[{speaker:'A', text:'', start:0, end:0}];
+      stopSpeaking();
+      resetOnAirUI();
+      $('#scriptText').innerHTML = `<span class="script-placeholder">${T('scriptPlaceholder')}</span>`;
+    }
+  }
+
+  $('#langToggle').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button[data-lang]');
+    if(btn) setLanguage(btn.dataset.lang);
+  });
+
+  function renderLocationChips(){
+    locationChipsEl.innerHTML = '';
+    LOCATIONS.forEach(loc=>{
+      const b = document.createElement('button');
+      b.type='button'; b.className='chip';
+      b.setAttribute('aria-pressed', state.location===loc.id ? 'true':'false');
+      b.innerHTML = `<svg class="icon"><use href="#${loc.icon}"></use></svg><span>${loc[state.language] || loc.en}</span>`;
+      b.addEventListener('click', ()=>{ state.location = loc.id; renderLocationChips(); });
+      locationChipsEl.appendChild(b);
+    });
+  }
+
+  function formatTime(t){
+    const [hStr,mStr] = t.split(':');
+    let h = parseInt(hStr,10);
+    const m = mStr || '00';
+    if(state.language === 'he'){
+      return `${String(h).padStart(2,'0')}:${m}`;
+    }
+    const suffix = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if(h===0) h = 12;
+    return `${h}:${m} ${suffix}`;
+  }
+
+  function addTime(t){
+    if(!t) return;
+    if(!state.times.includes(t)){ state.times.push(t); state.times.sort(); }
+    renderTimePresets(); renderSelectedTimes(); validateRhythmStep();
+  }
+  function removeTime(t){
+    state.times = state.times.filter(x=>x!==t);
+    renderTimePresets(); renderSelectedTimes(); validateRhythmStep();
+  }
+
+  function renderTimePresets(){
+    timePresetsEl.innerHTML='';
+    TIME_PRESETS.forEach(p=>{
+      const el = document.createElement('div');
+      el.className='option'; el.tabIndex=0; el.setAttribute('role','button');
+      const active = state.times.includes(p.time);
+      el.setAttribute('aria-pressed', active ? 'true':'false');
+      el.innerHTML = `<div class="opt-icon"><svg class="icon icon-sm"><use href="#${p.icon}"></use></svg></div><div class="opt-title">${p[state.language]||p.en}</div><div class="opt-sub">${formatTime(p.time)}</div>`;
+      el.addEventListener('click', ()=>{ active ? removeTime(p.time) : addTime(p.time); });
+      el.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); el.click(); }});
+      timePresetsEl.appendChild(el);
+    });
+  }
+
+  function renderSelectedTimes(){
+    selectedTimesEl.innerHTML='';
+    if(!state.times.length){
+      const hint = document.createElement('span');
+      hint.className='empty-hint';
+      hint.textContent = T('noTimesHint');
+      selectedTimesEl.appendChild(hint);
+      return;
+    }
+    state.times.forEach(t=>{
+      const chip = document.createElement('span');
+      chip.className='time-chip';
+      chip.innerHTML = `<span>${formatTime(t)}</span>`;
+      const rm = document.createElement('button');
+      rm.type='button'; rm.setAttribute('aria-label', `Remove ${formatTime(t)}`); rm.textContent='×';
+      rm.addEventListener('click', ()=> removeTime(t));
+      chip.appendChild(rm);
+      selectedTimesEl.appendChild(chip);
+    });
+  }
+
+  $('#addTimeBtn').addEventListener('click', ()=>{
+    const v = $('#customTimeInput').value;
+    addTime(v);
+  });
+
+  function validateRhythmStep(){
+    $('#toOnAirBtn').disabled = state.times.length === 0;
+  }
+
+  function renderChips(){
+    topicChipsEl.innerHTML = '';
+    TOPICS.forEach(t=>{
+      const b = document.createElement('button');
+      b.type='button'; b.className='chip';
+      const selected = state.topics.has(t.id);
+      b.setAttribute('aria-pressed', selected ? 'true':'false');
+      const iconId = selected ? 'check' : t.icon;
+      b.innerHTML = `<svg class="icon"><use href="#${iconId}"></use></svg><span>${t[state.language] || t.en}</span>`;
+      b.addEventListener('click', ()=>{
+        if(state.topics.has(t.id)){ state.topics.delete(t.id); }
+        else {
+          if(state.topics.size>=2){ const first = state.topics.values().next().value; state.topics.delete(first); }
+          state.topics.add(t.id);
+        }
+        renderChips(); validateTopicStep();
+      });
+      topicChipsEl.appendChild(b);
+    });
+  }
+
+  function updateDurationReadout(){
+    const mins = state.durationMinutes;
+    const unit = state.language === 'he' ? (mins === 1 ? 'דקה' : 'דקות') : (mins === 1 ? 'min' : 'min');
+    $('#durationValue').textContent = `${mins} ${unit}`;
+    $('#durationWords').textContent = `~${wordsForDuration(mins).toLocaleString()} ${T('words')}`;
+    const pct = ((mins - durationSliderEl.min) / (durationSliderEl.max - durationSliderEl.min)) * 100;
+    durationSliderEl.style.setProperty('--fill', pct + '%');
+  }
+
+  durationSliderEl.addEventListener('input', (e)=>{
+    state.durationMinutes = Number(e.target.value);
+    updateDurationReadout();
+  });
+
+  function renderFreqs(){
+    freqOptionsEl.innerHTML='';
+    FREQS.forEach(f=>{
+      const el = document.createElement('div');
+      el.className='option'; el.tabIndex=0; el.setAttribute('role','button');
+      el.setAttribute('aria-pressed', state.freq===f.id ? 'true':'false');
+      el.innerHTML = `<div class="opt-title">${f[state.language]||f.en}</div>`;
+      el.addEventListener('click', ()=>{ state.freq=f.id; renderFreqs(); });
+      el.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); el.click(); }});
+      freqOptionsEl.appendChild(el);
+    });
+  }
+
+  function renderStyleModes(){
+    styleOptionsEl.innerHTML='';
+    STYLE_MODES.forEach(s=>{
+      const el = document.createElement('div');
+      el.className='option'; el.tabIndex=0; el.setAttribute('role','button');
+      el.setAttribute('aria-pressed', state.styleMode===s.id ? 'true':'false');
+      const sub = state.language==='he' ? s.subHe : s.subEn;
+      el.innerHTML = `<div class="opt-title">${s[state.language]||s.en}</div><div class="opt-sub">${sub}</div>`;
+      el.addEventListener('click', ()=>{
+        state.styleMode = s.id;
+        try{ localStorage.setItem('tinytune_style_mode_v1', s.id); }catch(e){ /* storage unavailable */ }
+        renderStyleModes();
+      });
+      el.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); el.click(); }});
+      styleOptionsEl.appendChild(el);
+    });
+  }
+
+  function currentTopicLabel(){
+    const custom = state.customTopic.trim();
+    if(custom) return custom;
+    if(state.topics.size){
+      return Array.from(state.topics).map(id=>{
+        const t = TOPICS.find(x=>x.id===id);
+        return t ? (t[state.language]||t.en) : id;
+      }).join(' + ');
+    }
+    return '';
+  }
+
+  function currentTopicIcon(){
+    if(state.customTopic.trim()) return 'spark-rays';
+    if(state.topics.size){
+      const firstId = Array.from(state.topics)[0];
+      const t = TOPICS.find(x=>x.id===firstId);
+      return t ? t.icon : 'spark-rays';
+    }
+    return 'spark-rays';
+  }
+
+  function validateTopicStep(){
+    $('#toRhythmBtn').disabled = !currentTopicLabel();
+  }
+
+  $('#customTopic').addEventListener('input', (e)=>{
+    state.customTopic = e.target.value;
+    if(state.customTopic.trim()){ state.topics.clear(); renderChips(); }
+    validateTopicStep();
+  });
+
+  $('#surpriseBtn').addEventListener('click', ()=>{
+    state.customTopic=''; $('#customTopic').value='';
+    const pick = TOPICS[Math.floor(Math.random()*TOPICS.length)];
+    state.topics = new Set([pick.id]);
+    renderChips(); validateTopicStep();
+  });
+
+  const STEP_ORDER = ['topic','rhythm','onair'];
+
+  // Which edge the big background star's centre sits on, and which brand
+  // colour it glows, per step — alternating right/lime, left/purple,
+  // right/lime echoes the old mascot's side-to-side handoff between steps.
+  const STEP_STAR = {
+    topic: { side:'right', hue:'lime' },
+    rhythm:{ side:'left',  hue:'purple' },
+    onair: { side:'right', hue:'lime' },
+  };
+
+  function updateStarForStep(step){
+    const cfg = STEP_STAR[step] || STEP_STAR.topic;
+    const star = $('#brandStarBg');
+    const device = $('#device');
+    star.classList.toggle('pos-right', cfg.side === 'right');
+    star.classList.toggle('pos-left', cfg.side === 'left');
+    device.classList.toggle('star-purple', cfg.hue === 'purple');
+    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      star.classList.remove('is-rising');
+      void star.offsetWidth; // restart the rise-in animation cleanly
+      star.classList.add('is-rising');
+    }
+  }
+
+  function applyStep(step){
+    state.step = step;
+    STEP_ORDER.forEach(s=>{
+      $('#panel-'+s).hidden = (s!==step);
+    });
+    document.querySelectorAll('.dial-step').forEach(el=>{
+      const s = el.dataset.step;
+      el.classList.toggle('active', s===step);
+      el.classList.toggle('done', STEP_ORDER.indexOf(s) < STEP_ORDER.indexOf(step));
+    });
+    updateStarForStep(step);
+  }
+
+  function setStep(step){
+    if(step === state.step) return;
+    applyStep(step);
+  }
+
+  $('#toRhythmBtn').addEventListener('click', ()=> setStep('rhythm'));
+  $('#backToTopicBtn').addEventListener('click', ()=> setStep('topic'));
+  $('#backToRhythmBtn').addEventListener('click', ()=> setStep('rhythm'));
+  $('#toOnAirBtn').addEventListener('click', ()=>{
+    const topic = currentTopicLabel();
+    const timesLabel = state.times.map(formatTime).join(' + ');
+    const loc = LOCATIONS.find(l=>l.id===state.location) || LOCATIONS[0];
+    const freqObj = FREQS.find(f=>f.id===state.freq) || FREQS[1];
+    const locLabel = loc[state.language] || loc.en;
+    const freqLabel = freqObj[state.language] || freqObj.en;
+    $('#onAirSub').textContent = `${topic} · ${locLabel} · ${freqLabel} · ${timesLabel}`;
+    setStep('onair');
+  });
+
+  // ---------- waveform ----------
+  const canvas = $('#wave');
+  const ctx = canvas.getContext('2d');
+  let waveRAF = null;
+  function drawWave(active){
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+    const styles = getComputedStyle(document.documentElement);
+    const isReady = $('#onairStage').classList.contains('is-ready');
+    const barColor = isReady ? styles.getPropertyValue('--accent-warm-ink').trim() : styles.getPropertyValue('--accent').trim();
+    ctx.strokeStyle = barColor;
+    ctx.lineWidth = 3;
+    const bars = 40;
+    const gap = w / bars;
+    ctx.fillStyle = barColor;
+    for(let i=0;i<bars;i++){
+      let amp;
+      if(active){
+        amp = (Math.sin(Date.now()/140 + i*0.6) * 0.5 + 0.5) * 0.7 + Math.random()*0.15;
+      } else {
+        amp = 0.08;
+      }
+      const barH = Math.max(4, amp * (h*0.8));
+      const x = i*gap + gap*0.25;
+      const y = (h-barH)/2;
+      ctx.globalAlpha = active ? 0.85 : (isReady ? 0.55 : 0.4);
+      ctx.fillRect(x, y, gap*0.5, barH);
+    }
+    ctx.globalAlpha = 1;
+  }
+  function waveLoop(){
+    drawWave(state.speaking);
+    waveRAF = requestAnimationFrame(waveLoop);
+  }
+  waveLoop();
+
+  // ---------- status ----------
+  function setStatus(text, live){
+    $('#statusText').textContent = text;
+    $('#statusLine').classList.toggle('live', !!live);
+  }
+
+  // ---------- script rendering ----------
+  function renderScript(text){
+    state.words = text.split(/(\s+)/); // keep whitespace tokens
+    state.lastElapsedCharOffset = 0;
+    const container = $('#scriptText');
+    container.setAttribute('dir', state.language === 'he' ? 'rtl' : 'ltr');
+    container.setAttribute('lang', state.language === 'he' ? 'he' : 'en');
+    container.innerHTML='';
+    let charPos = 0;
+    state.wordSpans = [];
+    state.words.forEach(tok=>{
+      const span = document.createElement('span');
+      span.textContent = tok;
+      if(tok.trim().length){
+        span.className='w';
+        state.wordSpans.push({start:charPos, end:charPos+tok.length, el:span});
+      }
+      container.appendChild(span);
+      charPos += tok.length;
+    });
+  }
+
+  function highlightAt(charIndex){
+    if(!state.wordSpans) return;
+    state.wordSpans.forEach(w=>{
+      w.el.classList.toggle('active', charIndex>=w.start && charIndex < w.end);
+    });
+  }
+  function clearHighlight(){
+    if(!state.wordSpans) return;
+    state.wordSpans.forEach(w=> w.el.classList.remove('active'));
+  }
+
+  // ---------- generation ----------
+  function wordsForDuration(minutes){
+    return Math.round((minutes || state.durationMinutes) * WORDS_PER_MINUTE);
+  }
+
+  // ---------- topic progression (deepens the more you listen to one topic) ----------
+  function loadProgress(){
+    try{
+      const raw = localStorage.getItem('tinytune_topic_progress_v1');
+      return raw ? JSON.parse(raw) : {};
+    } catch(e){ return {}; }
+  }
+  function saveProgress(){
+    try{ localStorage.setItem('tinytune_topic_progress_v1', JSON.stringify(state.topicProgress)); }
+    catch(e){ /* storage unavailable — progression just won't persist across visits */ }
+  }
+  function currentTopicKey(){
+    const custom = state.customTopic.trim();
+    if(custom) return 'custom:' + custom.toLowerCase();
+    if(state.topics.size) return 'preset:' + Array.from(state.topics).sort().join('+');
+    return 'random';
+  }
+  function levelInfo(priorCount){
+    if(priorCount <= 0) return {
+      badge:{en:'Foundational', he:'יסודי'},
+      instruction:`This is the listener's very first spark on this topic. Ground the core idea clearly, but open with a real hook (a striking image, a surprising fact, or a sharp question), not a definition. Keep it curious and fun, like the best answer a sharp friend gives at a party — not a lecture.`,
+    };
+    if(priorCount <= 2) return {
+      badge:{en:'Building', he:'בונים'},
+      instruction:`The listener has already heard ${priorCount} spark(s) on this topic — skip the basic explanation entirely. Introduce one specific, named framework, mental model, or technique they likely haven't heard in a generic explainer, illustrated with one concrete, vivid example (a specific person, moment, or scenario — never a vague generality). Keep the voice playful and a little irreverent.`,
+    };
+    if(priorCount <= 5) return {
+      badge:{en:'Going deeper', he:'מעמיקים'},
+      instruction:`The listener has already heard ${priorCount} sparks on this topic. Go noticeably deeper and sharper than a beginner take: one specific, vivid story or case (invented is fine, but concrete and detailed, never generic), and a genuinely surprising or contrarian angle — like your smartest, most curious friend going down a rabbit hole, not a motivational speech.`,
+    };
+    if(priorCount <= 9) return {
+      badge:{en:'Advanced', he:'מתקדם'},
+      instruction:`The listener is well past the basics on this topic by now (${priorCount} sparks in). Bring a bold reframe, real stakes, a vivid concrete story, and rhythm to the language — and challenge an assumption, not just suggest a to-do. Confident and witty, never a hype-man pep talk.`,
+    };
+    return {
+      badge:{en:'Mastery', he:'שליטה'},
+      instruction:`The listener has explored this topic extensively (${priorCount} sparks so far) — speak to them as a peer who has done real work, not a beginner. Go to the edge cases, the nuance, the paradoxes, and the mastery-level insight most people never reach. Do not repeat fundamentals. Assume real sophistication and stay curious rather than preachy.`,
+    };
+  }
+  function showLevelBadge(level){
+    const el = $('#levelBadge');
+    el.textContent = level.badge[state.language] || level.badge.en;
+    el.hidden = false;
+  }
+
+  function currentStyleMode(){
+    return STYLE_MODES.find(s=>s.id===state.styleMode) || STYLE_MODES[0];
+  }
+
+  // ---------- two-host dialogue parsing ----------
+  // The model is asked (podcast style only) to prefix every line with "A:"
+  // or "B:". We turn that into a flat list of {speaker, text} turns, then
+  // flatten them back into one plain string (no prefixes) for display,
+  // sharing, and the existing word-highlight/scrub math — which never needs
+  // to know dialogue exists. Only playback (startSpeakingFrom) reads
+  // state.segments, to pick a different voice per turn. If the model ever
+  // ignores the format (or style is TED, a single speaker), everything
+  // collapses to one segment and behaves exactly as before.
+  function parseDialogueLines(rawText){
+    const lines = rawText.split(/\r?\n+/).map(l=>l.trim()).filter(Boolean);
+    const segments = [];
+    lines.forEach(line=>{
+      const m = line.match(/^[*_\s]*([AB])\s*[:\-–][*_]*\s*(.+)$/i);
+      if(m){
+        segments.push({ speaker: m[1].toUpperCase(), text: m[2].trim() });
+      } else if(segments.length){
+        segments[segments.length-1].text += ' ' + line;
+      } else {
+        segments.push({ speaker:'A', text: line });
+      }
+    });
+    return segments.length ? segments : [{speaker:'A', text: rawText.trim()}];
+  }
+
+  function buildSegments(rawText, isDialogue){
+    const raw = isDialogue ? parseDialogueLines(rawText) : [{speaker:'A', text: rawText.trim()}];
+    const cleaned = raw.filter(s=>s.text && s.text.trim().length).map(s=>({speaker:s.speaker, text:s.text.trim()}));
+    if(!cleaned.length) cleaned.push({speaker:'A', text: rawText.trim()});
+    let pos = 0;
+    const withOffsets = cleaned.map((seg,i)=>{
+      const start = pos;
+      const end = start + seg.text.length;
+      pos = end + (i < cleaned.length-1 ? 1 : 0); // +1 for the single joining space between turns
+      return {speaker:seg.speaker, text:seg.text, start, end};
+    });
+    return { segments: withOffsets, flattened: cleaned.map(s=>s.text).join(' ') };
+  }
+
+  function buildPrompt(topic, wordTarget, isAnother, level){
+    const loc = LOCATIONS.find(l=>l.id===state.location) || LOCATIONS[0];
+    const isDialogue = currentStyleMode().dialogue;
+    const languageLine = state.language === 'he'
+      ? `Write the ENTIRE segment in natural, colloquial spoken Hebrew (עברית מדוברת וטבעית) — not English, not transliterated, not mixed. Use everyday Hebrew a person would actually say out loud, not stiff written Hebrew. Keep the "A:" / "B:" line prefixes themselves in plain Latin letters exactly as specified — only the spoken words after them are Hebrew.`
+      : `Write the segment in natural spoken English.`;
+    return [
+      `You are the voice of TinyTune — a tiny audio app that hands people one sharp, delightful spark of curiosity to chew on during ${loc.phrase}. Think "the most fascinating thing your smartest, most curious friend told you at a party," not a motivational-speaker pep talk and not a dry explainer.`,
+      languageLine,
+      `Write a spoken-word segment of about ${wordTarget} words on this topic: "${topic}".`,
+      level.instruction,
+      currentStyleMode().instruction,
+      `Rules:`,
+      isDialogue
+        ? `- Write it as the two-host dialogue described above only — no headers, no bullet points, no sound-effect or stage directions beyond the required "A:"/"B:" line prefixes.`
+        : `- Write it as continuous spoken prose only — no headers, no bullet points, no sound-effect or stage directions, no labels like "Host:".`,
+      `- Open with a real hook in the first sentence — a vivid image, a surprising fact, or a sharp question. Never open with a generic greeting or "So, today let's talk about..."`,
+      `- Ground the idea in something concrete and specific — a real-feeling example, story, or moment — never in vague platitudes like "believe in yourself" or "small steps every day" unless you earn them with a specific, named mechanism.`,
+      `- Tone: witty, curious, a little irreverent, genuinely insightful. Never a hype-man, never preachy or soft-generic — this should feel written for this exact listener, not for anyone.`,
+      `- Include exactly one small, concrete thought, question, or micro-action the listener can turn over in their mind during that time — nothing that requires stopping, writing something down, or looking at a screen.`,
+      `- Do not assume the listener is driving or commuting unless that is explicitly their setting — keep it natural for whoever is listening, hands-free, wherever they are.`,
+      `- End with a short, punchy sign-off — playful and confident, not a soft platitude and not a motivational rally cry.`,
+      `- Do not mention that you are an AI, a script, or that this was generated.`,
+      isAnother ? `- Take a genuinely different angle than the obvious, expected take on this topic — surprise the listener.` : ``,
+    ].filter(Boolean).join('\n');
+  }
+
+
+  // ---------- built-in demo sparks ----------
+  // Used when live generation isn't available (viewer not signed in to
+  // Claude, or the page opened outside a Claude viewer) so anyone with the
+  // link can still hear TinyTune's voices and player. One short two-host
+  // dialogue per topic and language; TED style reads the same lines as one
+  // speaker.
+  const DEMO_SPARKS = {
+    en: {
+      focus: ["A: Quick question — what's the most productive thing you did last week?","B: Honestly? I can't remember.","A: Exactly. Research suggests it takes about twenty minutes to get back to full focus after an interruption, so a \"quick check\" of your phone costs way more than it feels like.","B: So the trick is fewer interruptions, not more willpower?","A: Right. Tonight, put your phone in another room for ten minutes and notice how loud your own head gets.","B: Ten minutes. I can do that."],
+      mindfulness: ["A: Try this: how many breaths have you taken since you started listening?","B: No idea. Zero? Wait, obviously not zero.","A: Right. Breathing is the one thing you do all day without noticing, which makes it a perfect doorway into the present.","B: So no incense, no mountain?","A: None. Just notice one breath going in and one going out. That's the whole practice.","B: Okay, I just did it. Annoyingly, it worked."],
+      money: ["A: If you put aside the price of one coffee every day for thirty years, how much do you think you'd have?","B: A few thousand?","A: With a typical long-term return it can grow into six figures. Time does the heavy lifting.","B: So starting early matters more than starting big.","A: Always. Small and early beats big and late.","B: Alright, small and early it is."],
+      creativity: ["A: The Beatles' \"Yesterday\" came to Paul McCartney in a dream. He spent weeks asking people if they'd heard the tune before, sure he'd stolen it.","B: Ha — his own brain handed him a hit and he thought it was theft.","A: That's creativity: your mind quietly recombines everything you've absorbed, even when you're not trying.","B: So the move is to feed it, then step away?","A: Exactly. Take a five-minute walk with no screen today and let ideas show up uninvited."],
+      communication: ["A: Weird fact: in most arguments, people aren't listening — they're rehearsing their reply.","B: Guilty. Completely guilty.","A: So in your next conversation, before you answer, repeat back what you heard in one sentence.","B: Like \"so what you're saying is...\"","A: Yes, and watch what happens — people relax the moment they feel understood.","B: That's almost too simple."],
+      health: ["A: Your body has a built-in energy rhythm. Most people dip in the early afternoon, and it's not just lunch.","B: So the 3 pm crash isn't a character flaw?","A: Not at all, it's biology. A ten-minute walk in daylight often beats another coffee.","B: Daylight over caffeine. Radical.","A: Try it today: step outside, no phone, ten minutes, and see how you feel."],
+      tech: ["A: Most of us use only a tiny fraction of what our phones can do.","B: Ha, I still don't know half the shortcuts.","A: One small habit fixes that: each week, learn one shortcut in an app you use every day.","B: One a week. That's about fifty a year.","A: And the seconds you save quietly add up to hours.","B: Okay, this week's shortcut is going on my list."],
+      confidence: ["A: Here's what actors know: confidence usually shows up after the action, not before.","B: So waiting to feel ready is a trap?","A: A big one. Nobody feels ready. You do the scary thing a little at a time and the feeling catches up.","B: What's the tiny version?","A: Today, do one small thing just outside your comfort zone — say your idea out loud in a meeting, or send that message.","B: Alright. Send first, feel ready later."],
+      generic: ["A: Here's a thought to chew on: the more you learn about something, the more questions you find.","B: That sounds exhausting.","A: It's actually the fun part. Curiosity isn't about answers, it's about better questions.","B: So what's today's question?","A: Pick anything you use every day and ask: how does this actually work?","B: Good one. I'm starting with my kettle."],
+    },
+    he: {
+      focus: ["A: שאלה קטנה: מה הדבר הכי פרודוקטיבי שעשית בשבוע שעבר?","B: וואלה? אין לי מושג.","A: בדיוק. מחקרים מראים שאחרי כל הפרעה לוקח בערך עשרים דקות לחזור לריכוז מלא, אז \"הצצה קטנה\" בטלפון עולה הרבה יותר ממה שנדמה.","B: אז הסוד הוא פחות הפרעות, לא יותר כוח רצון?","A: נכון. הערב תשים את הטלפון בחדר אחר לעשר דקות ותשים לב כמה רועש לך בראש.","B: עשר דקות? את זה אני יכול."],
+      mindfulness: ["A: בוא ננסה משהו: כמה נשימות לקחת מאז שהתחלת להקשיב?","B: אין לי מושג. אפס? רגע, ברור שלא אפס.","A: בדיוק. הנשימה היא הדבר היחיד שאנחנו עושים כל היום בלי לשים לב, ולכן היא שער מושלם לרגע הנוכחי.","B: אז בלי קטורת ובלי הר בטיבט?","A: בלי כלום. פשוט תשים לב לנשימה אחת שנכנסת ואחת שיוצאת. זה כל התרגול.","B: ניסיתי עכשיו. וזה, למרבה הטרדה, עבד."],
+      money: ["A: אם תשים בצד כל יום את המחיר של קפה אחד במשך שלושים שנה, כמה אתה חושב שיצטבר?","B: כמה אלפים?","A: עם תשואה ממוצעת לטווח ארוך, זה יכול להגיע לסכום של שש ספרות. הזמן עושה את העבודה הקשה.","B: אז חשוב להתחיל מוקדם יותר מאשר להתחיל בגדול.","A: תמיד. קטן ומוקדם מנצח גדול ומאוחר.","B: אוקיי, קטן ומוקדם."],
+      creativity: ["A: השיר \"Yesterday\" של הביטלס הגיע לפול מקרטני בחלום. הוא שאל אנשים שבועות אם הם מכירים את המנגינה, בטוח שהוא גנב אותה.","B: חח, המוח שלו נתן לו להיט והוא חשב שזו גניבה.","A: זו יצירתיות: המוח מערבב בשקט כל מה שקלטת, גם כשאתה לא מנסה.","B: אז צריך להאכיל אותו ואז להתרחק?","A: בדיוק. היום צא להליכה של חמש דקות בלי מסך ותן לרעיונות להגיע בלי הזמנה."],
+      communication: ["A: עובדה מוזרה: ברוב הוויכוחים אנשים לא מקשיבים, הם מתכננים מה לענות.","B: אשם. לגמרי אשם.","A: אז בשיחה הבאה, לפני שאתה עונה, תחזור במשפט אחד על מה ששמעת.","B: כמו \"אז מה שאתה אומר זה...\"","A: כן, ותראה מה קורה: אנשים נרגעים ברגע שהם מרגישים שהבינו אותם.","B: זה כמעט פשוט מדי."],
+      health: ["A: לגוף שלך יש קצב אנרגיה פנימי. רוב האנשים צונחים בצהריים, וזה לא רק בגלל האוכל.","B: אז הנפילה של שלוש אחר הצהריים היא לא פגם באופי?","A: בכלל לא, זו ביולוגיה. הליכה של עשר דקות באור יום מנצחת לא פעם עוד קפה.","B: אור יום במקום קפאין. מהפכני.","A: תנסה היום: צא החוצה, בלי טלפון, עשר דקות, ותראה איך אתה מרגיש."],
+      tech: ["A: רובנו משתמשים בחלק זעיר ממה שהטלפון שלנו יודע לעשות.","B: חח, אני עדיין לא מכיר חצי מהקיצורים.","A: הרגל קטן משנה את זה: כל שבוע ללמוד קיצור אחד באפליקציה שאתה משתמש בה כל יום.","B: קיצור בשבוע. זה בערך חמישים בשנה.","A: נכון, והשניות שנחסכות מצטברות בשקט לשעות.","B: אוקיי, הקיצור של השבוע נכנס לרשימה."],
+      confidence: ["A: יש משהו ששחקנים יודעים: הביטחון בדרך כלל מגיע אחרי הפעולה, לא לפניה.","B: אז לחכות להרגיש מוכן זו מלכודת?","A: מלכודת גדולה. אף אחד לא מרגיש מוכן. עושים את הדבר המפחיד קצת קצת, והתחושה מדביקה.","B: ומה הגרסה הקטנה?","A: היום תעשה דבר אחד קטן שקצת מחוץ לאזור הנוחות: תגיד רעיון בקול בפגישה, או תשלח את ההודעה ההיא.","B: טוב. קודם שולחים, אחר כך מרגישים מוכנים."],
+      generic: ["A: משהו לחשוב עליו: ככל שאתה לומד יותר על נושא, כך אתה מוצא יותר שאלות.","B: זה נשמע מעייף.","A: דווקא זה החלק הכיפי. סקרנות היא לא עניין של תשובות, אלא של שאלות טובות יותר.","B: אז מה השאלה להיום?","A: תבחר משהו שאתה משתמש בו כל יום ותשאל: איך זה בעצם עובד?","B: יפה. אני מתחיל מהקומקום."],
+    },
+  };
+  function demoSparkText(){
+    const lang = state.language === 'he' ? 'he' : 'en';
+    const custom = state.customTopic.trim();
+    const firstId = !custom && state.topics.size ? Array.from(state.topics)[0] : null;
+    const lines = (DEMO_SPARKS[lang][firstId] || DEMO_SPARKS[lang].generic);
+    return currentStyleMode().dialogue
+      ? lines.join('\n')
+      : lines.map(l=>l.replace(/^[AB]:\s*/,'')).join(' ');
+  }
+  const CAPABILITY_CODES = ['session_expired','sampling_disabled','capability_disabled','not_declared','capability_removed','not_granted'];
+
+  // ---------- bring-your-own-AI ----------
+  // Three ways to write a spark, in priority order:
+  //  1. a key the visitor pasted (Gemini, OpenAI or Anthropic), called
+  //     straight from the browser, so it works on any plain web host;
+  //  2. Claude's built-in "sample" when the page is opened inside Claude;
+  //  3. nothing connected -> show the connect card (or a canned demo).
+  const AI_PROVIDERS = {
+    gemini:   { label:'Gemini (Google)',   model:'gemini-flash-latest', keyUrl:'https://aistudio.google.com/apikey',        keyHint:{en:'Free key from Google AI Studio', he:'מפתח חינמי מ-Google AI Studio'} },
+    openai:   { label:'ChatGPT (OpenAI)',  model:'gpt-5-mini',          keyUrl:'https://platform.openai.com/api-keys',      keyHint:{en:'Key from OpenAI Platform (paid)', he:'מפתח מ-OpenAI Platform (בתשלום)'} },
+    anthropic:{ label:'Claude (Anthropic)',model:'claude-haiku-4-5',    keyUrl:'https://console.anthropic.com/settings/keys',keyHint:{en:'Key from Anthropic Console (paid)', he:'מפתח מ-Anthropic Console (בתשלום)'} },
+  };
+  const AI_STORE_KEY = 'tinytune_ai_v1';
+  const aiState = { claude:false, editing:false, memory:null };
+
+  function loadAI(){
+    try{
+      const raw = localStorage.getItem(AI_STORE_KEY);
+      if(raw){
+        const c = JSON.parse(raw);
+        if(c && AI_PROVIDERS[c.provider] && c.key) return c;
+      }
+    }catch(e){}
+    return aiState.memory;
+  }
+  function saveAI(cfg){
+    aiState.memory = cfg;
+    try{ localStorage.setItem(AI_STORE_KEY, JSON.stringify(cfg)); }catch(e){}
+  }
+  function clearAI(){
+    aiState.memory = null;
+    try{ localStorage.removeItem(AI_STORE_KEY); }catch(e){}
+  }
+
+  function aiError(code, message){ const e = new Error(message || code); e.code = code; return e; }
+
+  async function readApiError(res){
+    let msg = '';
+    try{ const j = await res.json(); msg = (j && (j.error && (j.error.message || j.error)) ) || ''; if(typeof msg !== 'string') msg = JSON.stringify(msg); }catch(e){}
+    return String(msg).slice(0,200);
+  }
+  function codeForStatus(status, msg){
+    if(status === 401 || status === 403) return 'bad_key';
+    if(status === 400 && /api key|api_key|credential/i.test(msg)) return 'bad_key';
+    if(status === 404) return 'bad_model';
+    if(status === 429 && /quota|billing|credit|balance|insufficient/i.test(msg)) return 'no_credit';
+    if(status === 429) return 'rate_limited';
+    return 'upstream_error';
+  }
+
+  async function callProvider(cfg, prompt){
+    const model = (cfg.model || AI_PROVIDERS[cfg.provider].model).trim();
+    let res;
+    try{
+      if(cfg.provider === 'gemini'){
+        res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'x-goog-api-key': cfg.key },
+          body: JSON.stringify({ contents:[{ role:'user', parts:[{ text: prompt }] }] }),
+        });
+      } else if(cfg.provider === 'openai'){
+        res = await fetch('https://api.openai.com/v1/chat/completions', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer ' + cfg.key },
+          body: JSON.stringify({ model, messages:[{ role:'user', content: prompt }] }),
+        });
+      } else {
+        res = await fetch('https://api.anthropic.com/v1/messages', {
+          method:'POST',
+          headers:{
+            'Content-Type':'application/json',
+            'x-api-key': cfg.key,
+            'anthropic-version':'2023-06-01',
+            'anthropic-dangerous-direct-browser-access':'true',
+          },
+          body: JSON.stringify({ model, max_tokens:16000, messages:[{ role:'user', content: prompt }] }),
+        });
+      }
+    } catch(netErr){
+      throw aiError('network', String(netErr && netErr.message || netErr));
+    }
+    if(!res.ok){
+      const msg = await readApiError(res);
+      throw aiError(codeForStatus(res.status, msg), 'HTTP ' + res.status + (msg ? ' — ' + msg : ''));
+    }
+    const data = await res.json();
+    let text = '';
+    if(cfg.provider === 'gemini'){
+      const parts = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+      text = (parts || []).map(p=>p.text || '').join('');
+    } else if(cfg.provider === 'openai'){
+      text = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content || '';
+    } else {
+      text = (data && data.content || []).filter(b=>b.type === 'text').map(b=>b.text).join('');
+    }
+    text = String(text || '').trim();
+    if(!text) throw aiError('empty_completion', 'The AI returned no text.');
+    return text;
+  }
+
+  // Overloaded services (HTTP 503) are common on free tiers and model names
+  // get retired, so a spark quietly retries, and for Gemini asks Google
+  // which Flash models exist right now and walks through them, before the
+  // visitor ever sees an error.
+  const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
+  let geminiModelCache = null;
+  async function geminiCandidateModels(key){
+    if(geminiModelCache) return geminiModelCache;
+    let found = [];
+    try{
+      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', {
+        headers:{ 'x-goog-api-key': key },
+      });
+      if(res.ok){
+        const data = await res.json();
+        found = (data.models || [])
+          .filter(m=> (m.supportedGenerationMethods || []).indexOf('generateContent') !== -1)
+          .map(m=> String(m.name || '').replace(/^models\//, ''))
+          // stable text models only: gemini-<ver>-flash or -flash-lite, no preview/exp/dated builds
+          .filter(n=> /^gemini-\d+(\.\d+)?-flash(-lite)?$/.test(n));
+      }
+    }catch(e){ /* discovery is best-effort */ }
+    const ver = n => parseFloat((n.match(/^gemini-(\d+(?:\.\d+)?)/) || [0,0])[1]);
+    found.sort((x,y)=>{
+      const lx = /lite$/.test(x) ? 1 : 0, ly = /lite$/.test(y) ? 1 : 0;
+      if(lx !== ly) return lx - ly;          // full Flash before Flash-Lite
+      return ver(y) - ver(x);                // newer first
+    });
+    const list = ['gemini-flash-latest'];
+    found.slice(0,4).forEach(n=>{ if(list.indexOf(n) === -1) list.push(n); });
+    if(list.length === 1) list.push('gemini-2.5-flash');
+    geminiModelCache = list;
+    return list;
+  }
+  async function callProviderResilient(cfg, prompt){
+    const base = (cfg.model || '').trim();
+    const models = (cfg.provider === 'gemini' && !base)
+      ? await geminiCandidateModels(cfg.key)
+      : [base || AI_PROVIDERS[cfg.provider].model];
+    let lastErr = null, busyErr = null;
+    for(let i=0; i<models.length; i++){
+      const attempts = i === 0 ? 2 : 1;
+      for(let attempt=0; attempt<attempts; attempt++){
+        try{
+          return await callProvider({ ...cfg, model: models[i] }, prompt);
+        } catch(e){
+          lastErr = e;
+          if(e && e.code === 'upstream_error'){
+            busyErr = e;
+            if(attempt < attempts-1) await sleep(1500);
+            continue;
+          }
+          if(e && e.code === 'bad_model' && models.length > 1) break; // try the next model
+          throw e;
+        }
+      }
+    }
+    throw busyErr || lastErr;
+  }
+
+  function renderAICard(){
+    const cfg = loadAI();
+    const lang = state.language === 'he' ? 'he' : 'en';
+    const providerSel = $('#aiProvider');
+    const chosen = providerSel.value || (cfg && cfg.provider) || 'gemini';
+    // provider options (labels are brand names; keep one-time build)
+    if(!providerSel.options.length){
+      Object.keys(AI_PROVIDERS).forEach(id=>{
+        const o = document.createElement('option');
+        o.value = id; o.textContent = AI_PROVIDERS[id].label;
+        providerSel.appendChild(o);
+      });
+    }
+    providerSel.value = chosen;
+    const prov = AI_PROVIDERS[chosen];
+    $('#aiKey').placeholder = T('aiKeyPlaceholder');
+    $('#aiModel').placeholder = prov.model;
+    const link = $('#aiGetKey');
+    link.href = prov.keyUrl;
+    link.textContent = T('aiGetKeyPrefix') + ' ' + prov.keyHint[lang];
+
+    const summary = $('#aiSummary');
+    const form = $('#aiForm');
+    const changeBtn = $('#aiChangeBtn');
+    let showForm;
+    if(cfg){
+      summary.hidden = false;
+      $('#aiSummaryText').innerHTML = '';
+      const lead = document.createTextNode(T('aiConnectedTo') + ' ');
+      const strong = document.createElement('strong');
+      strong.textContent = AI_PROVIDERS[cfg.provider].label;
+      $('#aiSummaryText').append(lead, strong);
+      changeBtn.textContent = T('aiChange');
+      showForm = aiState.editing;
+    } else if(aiState.claude){
+      summary.hidden = false;
+      $('#aiSummaryText').textContent = T('aiUsingClaude');
+      changeBtn.textContent = T('aiUseOwn');
+      showForm = aiState.editing;
+    } else {
+      summary.hidden = true;
+      showForm = true;
+    }
+    form.hidden = !showForm;
+    $('#aiDemoBtn').hidden = !!(cfg || aiState.claude);
+  }
+
+  function showAIError(msg){
+    const el = $('#aiError');
+    if(!msg){ el.hidden = true; el.textContent = ''; return; }
+    el.textContent = msg; el.hidden = false;
+  }
+
+  $('#aiProvider').addEventListener('change', renderAICard);
+  $('#aiChangeBtn').addEventListener('click', ()=>{
+    aiState.editing = !aiState.editing;
+    const cfg = loadAI();
+    if(aiState.editing && cfg){
+      $('#aiProvider').value = cfg.provider;
+      $('#aiKey').value = cfg.key;
+      $('#aiModel').value = cfg.model || '';
+    }
+    showAIError('');
+    renderAICard();
+  });
+  $('#aiSaveBtn').addEventListener('click', ()=>{
+    const key = $('#aiKey').value.trim();
+    if(!key){ showAIError(T('aiEnterKey')); return; }
+    const provider = $('#aiProvider').value;
+    const model = $('#aiModel').value.trim();
+    saveAI({ provider, key, model: model || '' });
+    aiState.editing = false;
+    showAIError('');
+    $('#aiKey').value = '';
+    renderAICard();
+    // if the script area was asking to connect, nudge it
+    if(!state.script && !state.generating){
+      $('#scriptText').innerHTML = `<span class="script-placeholder">${T('scriptPlaceholder')}</span>`;
+      setStatus(T('standingBy'), false);
+    }
+  });
+  $('#aiDemoBtn').addEventListener('click', ()=> generateSpark(false, true));
+
+  // ---------- welcome / one-paste connect ----------
+  // Pasting a key anywhere auto-detects the provider from its prefix,
+  // verifies it with a tiny test call, and connects, so there is nothing
+  // to pick or press.
+  const WELCOME_SEEN_KEY = 'tinytune_welcome_v1';
+  function detectProviderFromKey(k){
+    if(/^AIza[0-9A-Za-z_\-]{20,}$/.test(k)) return 'gemini';
+    if(/^sk-ant-[0-9A-Za-z_\-]{20,}$/.test(k)) return 'anthropic';
+    if(/^sk-[0-9A-Za-z_\-]{20,}$/.test(k)) return 'openai';
+    return null;
+  }
+  function setWelcomeMsg(text, kind){
+    const el = $('#welcomeMsg');
+    el.textContent = text || '';
+    el.className = 'welcome-msg' + (kind ? ' ' + kind : '');
+  }
+  function closeWelcome(remember){
+    $('#welcome').hidden = true;
+    if(remember){ try{ localStorage.setItem(WELCOME_SEEN_KEY, '1'); }catch(e){} }
+  }
+  function renderWelcome(){
+    const w = $('#welcome');
+    w.setAttribute('dir', state.language === 'he' ? 'rtl' : 'ltr');
+    w.setAttribute('lang', state.language === 'he' ? 'he' : 'en');
+    $('#welcomeKey').placeholder = T('wKeyPlaceholder');
+  }
+  function maybeShowWelcome(){
+    let seen = false;
+    try{ seen = localStorage.getItem(WELCOME_SEEN_KEY) === '1'; }catch(e){}
+    if(seen || aiState.claude || loadAI()) return;
+    renderWelcome();
+    $('#welcome').hidden = false;
+  }
+  async function connectWithKey(rawKey, fromWelcome){
+    const key = String(rawKey || '').trim();
+    if(!key) return false;
+    const provider = detectProviderFromKey(key);
+    if(!provider){
+      if(fromWelcome) setWelcomeMsg(T('wBadFormat'), 'err');
+      return false;
+    }
+    if(fromWelcome) setWelcomeMsg(T('wChecking'));
+    try{
+      await callProvider({ provider, key, model:'' }, 'Reply with the single word: ok');
+    } catch(err){
+      if(fromWelcome){
+        const code = err && err.code;
+        setWelcomeMsg(code === 'bad_key' ? T('aiBadKey') : code === 'network' ? T('aiNetwork') :
+                      code === 'bad_model' ? T('aiBadModel') : code === 'no_credit' ? T('aiNoCredit') :
+                      code === 'rate_limited' ? T('rateLimited') : T('genericError'), 'err');
+      }
+      return false;
+    }
+    saveAI({ provider, key, model:'' });
+    aiState.editing = false;
+    renderAICard();
+    if(fromWelcome){
+      setWelcomeMsg(T('wDone'), 'ok');
+      setTimeout(()=> closeWelcome(true), 900);
+    }
+    return true;
+  }
+  $('#welcomeKey').addEventListener('input', ()=>{
+    const v = $('#welcomeKey').value.trim();
+    if(!v){ setWelcomeMsg(''); return; }
+    // wait until it looks like a whole key, then connect by itself
+    if(detectProviderFromKey(v)){ connectWithKey(v, true); }
+    else if(v.length > 12){ setWelcomeMsg(T('wBadFormat'), 'err'); }
+  });
+  $('#welcomeSkip').addEventListener('click', ()=> closeWelcome(true));
+  document.addEventListener('keydown', e=>{
+    if(e.key === 'Escape' && !$('#welcome').hidden) closeWelcome(true);
+  });
+  // the same auto-detect on the On Air card's key field
+  $('#aiKey').addEventListener('input', ()=>{
+    const p = detectProviderFromKey($('#aiKey').value.trim());
+    if(p){ $('#aiProvider').value = p; renderAICard(); }
+  });
+
+
+  // ---------- pick the key up from the clipboard ----------
+  // Clicking "Get my free key" opens Google AI Studio in a small window.
+  // When the visitor comes back to this tab, TinyTune looks at the clipboard
+  // once; if it holds a key, it connects by itself. (Browsers ask for
+  // clipboard permission the first time.) Nothing else on the clipboard is
+  // kept or sent anywhere.
+  const clip = { waiting:false, busy:false };
+  function openKeyWindow(url){
+    clip.waiting = true;
+    if($('#welcome') && !$('#welcome').hidden) setWelcomeMsg(T('wWaiting'));
+    let w = null;
+    try{ w = window.open(url, 'tinytune_getkey', 'popup=yes,width=560,height=780'); }catch(e){}
+    if(!w){ try{ window.open(url, '_blank', 'noopener'); }catch(e){} }
+  }
+  async function tryClipboardConnect(manual){
+    if(clip.busy) return;
+    if(!manual && !clip.waiting) return;
+    if(loadAI()) { clip.waiting = false; return; }
+    clip.busy = true;
+    try{
+      const text = (await navigator.clipboard.readText() || '').trim();
+      if(detectProviderFromKey(text)){
+        clip.waiting = false;
+        const welcomeOpen = !$('#welcome').hidden;
+        const ok = await connectWithKey(text, welcomeOpen);
+        if(ok){
+          try{ navigator.clipboard.writeText(''); }catch(e){}
+        }
+      } else if(manual){
+        setWelcomeMsg(T('wBadFormat'), 'err');
+      }
+    } catch(e){
+      if(manual) setWelcomeMsg(T('wNoClip'), 'err');
+    } finally { clip.busy = false; }
+  }
+  window.addEventListener('focus', ()=> setTimeout(()=> tryClipboardConnect(false), 150));
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible') setTimeout(()=> tryClipboardConnect(false), 150);
+  });
+  $('#welcomeGetKey').addEventListener('click', e=>{ e.preventDefault(); openKeyWindow(AI_PROVIDERS.gemini.keyUrl); });
+  $('#aiGetKey').addEventListener('click', e=>{
+    e.preventDefault();
+    const prov = AI_PROVIDERS[$('#aiProvider').value] || AI_PROVIDERS.gemini;
+    openKeyWindow(prov.keyUrl);
+  });
+  $('#welcomePasteBtn').addEventListener('click', ()=> tryClipboardConnect(true));
+
+
+  // Is Claude's built-in "ask Claude" reachable in this view? (inside Claude only)
+  (async function detectClaude(){
+    try{
+      if(typeof claude !== 'undefined' && claude && claude.use){
+        const s = await claude.use('sample');
+        aiState.claude = !!s;
+      }
+    }catch(e){ aiState.claude = false; }
+    renderAICard();
+    maybeShowWelcome();
+  })();
+
+
+  function showGenerateProblem(msg, detail){
+    const box = $('#scriptText');
+    box.innerHTML = '';
+    const p = document.createElement('span');
+    p.className = 'script-placeholder';
+    p.textContent = msg;
+    box.appendChild(p);
+    if(detail){
+      const d = document.createElement('div');
+      d.style.cssText = 'margin-top:10px;font-size:11px;opacity:.7;font-family:monospace;direction:ltr;text-align:left;word-break:break-word;';
+      d.textContent = 'code: ' + detail;
+      box.appendChild(d);
+    }
+  }
+
+  function needConnectAI(){
+    aiState.editing = true;
+    renderAICard();
+    $('#scriptText').innerHTML = `<span class="script-placeholder">${T('aiNeedConnect')}</span>`;
+    setStatus(T('standingBy'), false);
+    state.generating = false;
+    $('#generateRow').hidden = false;
+    try{ $('#aiCard').scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){}
+  }
+
+  async function generateSpark(isAnother, forceDemo){
+    const topic = currentTopicLabel() || (state.language==='he' ? 'משהו מעניין' : 'something interesting');
+    const topicKey = currentTopicKey();
+    const priorCount = state.topicProgress[topicKey] || 0;
+    const level = levelInfo(priorCount);
+    state.generating = true;
+    stopSpeaking();
+    resetOnAirUI();
+    setStatus(isAnother ? T('rewriting') : T('writing'), false);
+    renderScript('');
+    $('#scriptText').innerHTML = `<span class="script-placeholder">${T('writing')}</span>`;
+
+    try{
+      // `claude` doesn't exist at all when the page is opened as a plain
+      // saved file / outside a Claude viewer; and use('sample') resolves
+      // null when the viewer isn't signed in to Claude or Ask-Claude isn't
+      // available in this view. Both get the same clear "sign in" message.
+      let rawText = '';
+      let isDemo = false;
+      const aiCfg = loadAI();
+      if(forceDemo){
+        isDemo = true;
+        rawText = demoSparkText();
+      } else if(aiCfg && aiCfg.key){
+        // the visitor's own key wins over anything else
+        const prompt = buildPrompt(topic, wordsForDuration(state.durationMinutes), isAnother, level);
+        rawText = await callProviderResilient(aiCfg, prompt);
+      } else {
+        // `claude` is absent outside a Claude viewer; use('sample') is null
+        // when Ask-Claude isn't available (e.g. not signed in).
+        let sample = null;
+        try{
+          sample = (typeof claude !== 'undefined' && claude && claude.use) ? await claude.use('sample') : null;
+        }catch(e){ sample = null; }
+        if(!sample){ needConnectAI(); return; }
+        const prompt = buildPrompt(topic, wordsForDuration(state.durationMinutes), isAnother, level);
+        try{
+          const result = await sample(prompt, {
+            modelTier: 'default',
+            onText: ({text})=>{
+              $('#scriptText').textContent = text;
+            }
+          });
+          rawText = (result && result.text ? result.text : '').trim();
+        } catch(e){
+          if(e && CAPABILITY_CODES.indexOf(e.code) !== -1 && e.code !== 'not_granted'){
+            needConnectAI(); return;
+          }
+          throw e;
+        }
+      }
+      const fallback = state.language==='he' ? 'הנה מחשבה קטנה שכדאי לקחת איתך היום.' : "Here's a small thought worth carrying with you today.";
+      const { segments, flattened } = buildSegments(rawText || fallback, currentStyleMode().dialogue);
+      state.segments = segments;
+      state.script = flattened;
+      renderScript(state.script);
+      setStatus(T('readyToPlay'), false);
+
+      document.querySelector('#onairTopicIcon use').setAttribute('href', '#'+currentTopicIcon());
+      $('#onairTopicTagText').textContent = topic;
+      $('#onairDurationTag').textContent = `${state.durationMinutes} ${T('minAbbrev')}`;
+      $('#onairTagRow').hidden = false;
+      $('#onairStage').classList.add('is-ready');
+      $('#onairScrub').hidden = false;
+      updateScrub(0);
+      $('#playerRow').hidden = false;
+      $('#playerActionsRow').hidden = false;
+      $('#playerSecondaryRow').hidden = false;
+
+      if(isDemo){
+        const dn = $('#demoNote');
+        dn.textContent = T('demoNote');
+        dn.hidden = false;
+      } else {
+        state.topicProgress[topicKey] = priorCount + 1;
+        saveProgress();
+        showLevelBadge(level);
+      }
+    } catch(err){
+      const code = (err && err.code) || (err && err.name) || 'error';
+      let msg = T('genericError');
+      if(code === 'not_granted') msg = T('notGranted');
+      else if(code === 'rate_limited') msg = T('rateLimited');
+      else if(code === 'bad_key') msg = T('aiBadKey');
+      else if(code === 'bad_model') msg = T('aiBadModel');
+      else if(code === 'network') msg = T('aiNetwork');
+      else if(code === 'no_credit') msg = T('aiNoCredit');
+      else if(code === 'upstream_error' && /HTTP 5/.test(String(err && err.message))) msg = T('aiBusy');
+      else if(code === 'session_expired' || code === 'sampling_disabled' ||
+              code === 'capability_disabled' || code === 'not_declared' ||
+              code === 'capability_removed') msg = T('capabilityMissing');
+      // Show a tiny technical code under the message so a failure on someone
+      // else's device can be diagnosed from a screenshot.
+      showGenerateProblem(msg, String(code) + (err && err.message ? ': ' + String(err.message).slice(0,120) : ''));
+      setStatus(T('standingBy'), false);
+      $('#generateRow').hidden = false;
+    }
+    state.generating = false;
+  }
+
+  $('#generateBtn').addEventListener('click', ()=> generateSpark(false));
+  $('#anotherBtn').addEventListener('click', ()=> generateSpark(true));
+
+  // ---------- speech ----------
+  let utterance = null;
+  const voiceSelectEl = $('#voiceSelect');
+
+  function pickVoice(){
+    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    if(!voices.length) return null;
+    if(state.voiceURI){
+      const match = voices.find(v=>v.voiceURI===state.voiceURI);
+      if(match) return match;
+    }
+    const wanted = state.language === 'he' ? /^he/i : /^en/i;
+    return voices.find(v=>wanted.test(v.lang)) || voices[0] || null;
+  }
+
+  // The second host's voice for two-host podcast dialogue: the first other
+  // voice available in the same language pool as the main (Host A) voice.
+  // Most desktops only have one voice per language installed — when there's
+  // no real second voice to pick, callers fall back to the same voice with
+  // a shifted pitch instead (see speakSegment), so the two hosts are still
+  // audibly distinct.
+  function pickVoiceB(){
+    const voices = window.speechSynthesis ? window.speechSynthesis.getVoices() : [];
+    if(!voices.length) return null;
+    const wanted = state.language === 'he' ? /^he/i : /^en/i;
+    const pool = voices.filter(v=>wanted.test(v.lang));
+    const list = pool.length ? pool : voices;
+    const voiceA = pickVoice();
+    if(!voiceA) return list[0] || null;
+    return list.find(v=>v.voiceURI !== voiceA.voiceURI) || voiceA;
+  }
+
+  function showNoSpeechSupport(){
+    const controls = $('#voiceControls');
+    if(controls) controls.hidden = true;
+    $('#voiceWarning').hidden = true;
+    const msg = $('#noSpeechSupportMsg');
+    msg.textContent = T('noSpeechSupport');
+    msg.hidden = false;
+  }
+
+  function populateVoices(){
+    if(!('speechSynthesis' in window)){
+      showNoSpeechSupport();
+      return;
+    }
+    const voices = window.speechSynthesis.getVoices();
+    if(!voices.length) return; // will retry on voiceschanged
+    const wanted = state.language === 'he' ? /^he/i : /^en/i;
+    const preferred = voices.filter(v=>wanted.test(v.lang));
+    const list = preferred.length ? preferred : voices;
+    voiceSelectEl.innerHTML = '';
+    list.forEach(v=>{
+      const opt = document.createElement('option');
+      opt.value = v.voiceURI;
+      opt.textContent = `${v.name} (${v.lang})`;
+      voiceSelectEl.appendChild(opt);
+    });
+    if(!state.voiceURI || !list.some(v=>v.voiceURI===state.voiceURI)){
+      state.voiceURI = list[0].voiceURI;
+    }
+    voiceSelectEl.value = state.voiceURI;
+
+    const warningEl = $('#voiceWarning');
+    if(state.language === 'he' && !preferred.length){
+      warningEl.textContent = T('voiceWarning');
+      warningEl.hidden = false;
+    } else {
+      warningEl.hidden = true;
+    }
+  }
+
+  voiceSelectEl.addEventListener('change', (e)=>{
+    state.voiceURI = e.target.value;
+    $('#previewNoSoundWarning').hidden = true;
+  });
+
+  $('#previewVoiceBtn').addEventListener('click', ()=>{
+    if(!('speechSynthesis' in window)){ showNoSpeechSupport(); return; }
+    window.speechSynthesis.cancel();
+    const previewText = state.language === 'he' ? 'שלום, אני הקול שלך ב-TinyTune. נעים להכיר.' : "Hi, I'm your TinyTune voice. Nice to meet you.";
+    const sample = new SpeechSynthesisUtterance(previewText);
+    const v = pickVoice();
+    // Use the voice's own declared language when we have one — forcing a mismatched
+    // lang (e.g. he-IL) onto a voice that isn't actually Hebrew makes some engines
+    // (notably Android Chrome) fail completely silently instead of falling back.
+    sample.lang = v ? v.lang : (state.language === 'he' ? 'he-IL' : 'en-US');
+    if(v) sample.voice = v;
+    sample.rate = 0.97;
+    let started = false;
+    const warnEl = $('#previewNoSoundWarning');
+    warnEl.hidden = true;
+    sample.onstart = ()=>{ started = true; warnEl.hidden = true; };
+    window.speechSynthesis.speak(sample);
+    setTimeout(()=>{
+      if(!started){
+        // #statusText lives inside the (currently hidden) On Air panel, so
+        // setStatus() alone would write a message nobody on this step can
+        // see — this button needs its own visible warning, right here.
+        warnEl.textContent = T('noSoundWarning');
+        warnEl.hidden = false;
+      }
+    }, 2200);
+  });
+
+  function setPlayIconState(isPlaying){
+    const btn = $('#playBtn');
+    if(!btn) return;
+    if(isPlaying){
+      btn.innerHTML = '<span aria-hidden="true" style="font-size:19px;line-height:1;">❚❚</span>';
+      btn.setAttribute('aria-label','Pause');
+    } else {
+      btn.innerHTML = '<svg class="icon icon-fill"><use href="#play"></use></svg>';
+      btn.setAttribute('aria-label','Play');
+    }
+  }
+
+  function stopSpeaking(){
+    if(window.speechSynthesis){ window.speechSynthesis.cancel(); }
+    state.speaking = false;
+    clearHighlight();
+    setPlayIconState(false);
+    setStatus(state.script ? T('readyToPlay') : T('standingBy'), false);
+  }
+
+  function estimateTotalSeconds(){
+    if(!state.script) return 0;
+    const count = state.script.trim().split(/\s+/).filter(Boolean).length;
+    return count / WORDS_PER_MINUTE * 60;
+  }
+  function formatClock(sec){
+    sec = Math.max(0, Math.round(sec));
+    const m = Math.floor(sec/60), s = sec%60;
+    return `${m}:${String(s).padStart(2,'0')}`;
+  }
+  function updateScrub(charIndex){
+    state.lastElapsedCharOffset = charIndex;
+    const totalChars = state.script.length || 1;
+    const totalSec = estimateTotalSeconds();
+    const frac = Math.min(1, Math.max(0, charIndex/totalChars));
+    const elapsedSec = totalSec*frac;
+    const remainingSec = Math.max(0, totalSec-elapsedSec);
+    const fillEl = $('#scrubFill');
+    if(fillEl) fillEl.style.width = (frac*100)+'%';
+    const elEl = $('#scrubElapsed'); if(elEl) elEl.textContent = formatClock(elapsedSec);
+    const remEl = $('#scrubRemaining'); if(remEl) remEl.textContent = '-'+formatClock(remainingSec);
+  }
+  function charIndexAtElapsedSeconds(sec){
+    const totalSec = estimateTotalSeconds();
+    const totalChars = state.script.length || 1;
+    const frac = totalSec ? Math.min(1, Math.max(0, sec/totalSec)) : 0;
+    return Math.round(frac*totalChars);
+  }
+
+  function findSegmentIndexAt(offset){
+    const segs = state.segments;
+    for(let i=0;i<segs.length;i++){
+      if(offset < segs[i].end || i === segs.length-1) return i;
+    }
+    return segs.length-1;
+  }
+
+  // Speaks state.segments starting at segIdx (from localOffset chars into
+  // that segment), then chains to the next segment on end — this is how a
+  // two-host podcast switches voices mid-playback while rewind/forward and
+  // the word-highlight scrub bar keep working exactly as with one speaker,
+  // since every segment reports its boundary events in the SAME absolute
+  // character coordinates as state.script (see buildSegments).
+  function speakSegment(segIdx, localOffset, sessionStarted){
+    const segs = state.segments;
+    if(segIdx >= segs.length){
+      state.speaking = false;
+      clearHighlight();
+      setPlayIconState(false);
+      setStatus(T('readyToPlay'), false);
+      updateScrub(state.script.length);
+      return;
+    }
+    const seg = segs[segIdx];
+    const text = seg.text.slice(localOffset);
+    if(!text.trim()){
+      speakSegment(segIdx+1, 0, sessionStarted);
+      return;
+    }
+    const isHostB = seg.speaker === 'B';
+    const voiceA = pickVoice();
+    const voice = isHostB ? pickVoiceB() : voiceA;
+    const sameVoiceFallback = isHostB && voice && voiceA && voice.voiceURI === voiceA.voiceURI;
+    const base = seg.start + localOffset;
+    utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = voice ? voice.lang : (state.language === 'he' ? 'he-IL' : 'en-US');
+    if(voice) utterance.voice = voice;
+    utterance.rate = 0.97;
+    // When there's no real second voice installed, shift Host B's pitch up
+    // so the two hosts still sound like two different people.
+    utterance.pitch = sameVoiceFallback ? 1.18 : 1.0;
+    utterance.onstart = ()=>{
+      sessionStarted.value = true;
+      state.speaking = true;
+      setPlayIconState(true);
+      setStatus(T('onAir'), true);
+      $('#noSoundBanner').hidden = true;
+    };
+    utterance.onboundary = (e)=>{
+      if(typeof e.charIndex === 'number'){
+        const abs = base + e.charIndex;
+        highlightAt(abs);
+        updateScrub(abs);
+      }
+    };
+    utterance.onend = ()=>{ speakSegment(segIdx+1, 0, sessionStarted); };
+    utterance.onerror = ()=>{ stopSpeaking(); };
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function startSpeakingFrom(offset){
+    if(!('speechSynthesis' in window)){
+      setStatus(T('audioUnsupported'), false);
+      const banner = $('#noSoundBanner');
+      banner.textContent = T('noSpeechSupport');
+      banner.hidden = false;
+      return;
+    }
+    if(!state.script) return;
+    window.speechSynthesis.cancel();
+    offset = Math.max(0, Math.min(offset, state.script.length));
+    if(!state.script.slice(offset).trim()){
+      state.speaking = false;
+      clearHighlight();
+      setPlayIconState(false);
+      setStatus(T('readyToPlay'), false);
+      updateScrub(state.script.length);
+      return;
+    }
+    $('#noSoundBanner').hidden = true;
+    const segIdx = findSegmentIndexAt(offset);
+    const localOffset = Math.max(0, offset - state.segments[segIdx].start);
+    const sessionStarted = { value: false };
+    speakSegment(segIdx, localOffset, sessionStarted);
+    setTimeout(()=>{
+      if(!sessionStarted.value){
+        // The status line up in the card is built for a short word or two
+        // ("Standing by", "On air"), not this whole sentence, so the actual
+        // explanation goes in the banner below the controls instead, where
+        // there's room to read it.
+        setStatus(T('readyToPlay'), false);
+        const banner = $('#noSoundBanner');
+        banner.textContent = T('noSoundWarning');
+        banner.hidden = false;
+      }
+    }, 2200);
+  }
+
+  function playSpeaking(){
+    if(state.speaking){ stopSpeaking(); return; }
+    if(!state.script){ return; }
+    startSpeakingFrom(state.lastElapsedCharOffset || 0);
+  }
+
+  function skip(deltaSeconds){
+    if(!state.script) return;
+    const totalSec = estimateTotalSeconds();
+    const totalChars = state.script.length || 1;
+    const curSec = totalSec * ((state.lastElapsedCharOffset||0)/totalChars);
+    const targetSec = Math.min(totalSec, Math.max(0, curSec+deltaSeconds));
+    startSpeakingFrom(charIndexAtElapsedSeconds(targetSec));
+  }
+
+  $('#playBtn').addEventListener('click', playSpeaking);
+  $('#rewindBtn').addEventListener('click', ()=> skip(-15));
+  $('#forwardBtn').addEventListener('click', ()=> skip(15));
+
+  let savedThisSpark = false;
+  function loadSavedSparks(){ try{ return JSON.parse(localStorage.getItem('tinytune_saved_v1')||'[]'); } catch(e){ return []; } }
+  function persistSavedSparks(list){ try{ localStorage.setItem('tinytune_saved_v1', JSON.stringify(list)); } catch(e){ /* storage unavailable */ } }
+
+  $('#saveBtn').addEventListener('click', ()=>{
+    if(!state.script) return;
+    savedThisSpark = !savedThisSpark;
+    $('#saveBtn').classList.toggle('is-active', savedThisSpark);
+    if(savedThisSpark){
+      const list = loadSavedSparks();
+      list.push({ topic: currentTopicLabel(), text: state.script, lang: state.language, at: Date.now() });
+      persistSavedSparks(list);
+    }
+  });
+
+  $('#shareBtn').addEventListener('click', async ()=>{
+    if(!state.script) return;
+    try{
+      if(navigator.share){
+        await navigator.share({ title: 'TinyTune', text: state.script });
+      } else if(navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(state.script);
+        setStatus(T('copiedToClipboard'), false);
+      }
+    } catch(e){ /* share sheet dismissed — nothing to do */ }
+  });
+
+  if(window.speechSynthesis){
+    window.speechSynthesis.onvoiceschanged = populateVoices;
+    populateVoices();
+  } else {
+    showNoSpeechSupport();
+  }
+
+  $('#doneBtn').addEventListener('click', ()=>{
+    stopSpeaking();
+    $('#playerRow').hidden = true;
+    $('#playerActionsRow').hidden = true;
+    $('#playerSecondaryRow').hidden = true;
+    $('#onairScrub').hidden = true;
+    const topicLabel = currentTopicLabel() || T('todaysSpark');
+    $('#doneSub').innerHTML = `${T('doneSubPrefix')} <span id="doneTopic">${topicLabel}</span>.`;
+    $('#doneNote').hidden = false;
+  });
+
+  $('#restartBtn').addEventListener('click', ()=>{
+    state.script=''; state.wordSpans=[]; state.segments=[{speaker:'A', text:'', start:0, end:0}];
+    resetOnAirUI();
+    $('#scriptText').innerHTML = `<span class="script-placeholder">${T('scriptPlaceholder')}</span>`;
+    setStatus(T('standingBy'), false);
+  });
+
+  // init
+  state.topicProgress = loadProgress();
+  try{
+    const savedStyle = localStorage.getItem('tinytune_style_mode_v1');
+    if(savedStyle && STYLE_MODES.some(s=>s.id===savedStyle)) state.styleMode = savedStyle;
+  }catch(e){ /* storage unavailable — defaults to 'podcast' */ }
+  applyStrings();
+  renderChips();
+  renderLocationChips();
+  durationSliderEl.value = state.durationMinutes;
+  updateDurationReadout();
+  renderFreqs();
+  renderStyleModes();
+  renderTimePresets();
+  renderSelectedTimes();
+  validateTopicStep();
+  validateRhythmStep();
+})();
+</script>
+
+</body>
+</html>

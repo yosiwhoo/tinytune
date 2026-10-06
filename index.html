@@ -645,6 +645,51 @@
   .ai-card select{ background:var(--surface); }
   .ai-card details summary{ font-size:12px; color:var(--ink-soft); cursor:pointer; }
 
+
+  /* ---------- welcome / connect modal ---------- */
+  .welcome-overlay{
+    position:fixed; inset:0; z-index:100;
+    background:rgba(0,0,0,.72);
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+    display:flex; align-items:center; justify-content:center;
+    padding:16px;
+  }
+  .welcome-overlay[hidden]{ display:none !important; }
+  .welcome-card{
+    width:100%; max-width:400px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:24px;
+    padding:26px 22px 22px;
+    box-shadow:var(--shadow);
+    display:flex; flex-direction:column; gap:14px;
+    position:relative; overflow:hidden;
+    font-family:var(--font-body);
+    color:var(--ink);
+  }
+  .welcome-card::before{
+    content:""; position:absolute; inset:0 0 auto 0; height:4px;
+    background:linear-gradient(90deg,var(--accent),var(--accent-warm));
+  }
+  .welcome-card h2{ font-size:22px; line-height:1.15; }
+  .welcome-card p{ margin:0; font-size:14px; line-height:1.5; color:var(--ink-soft); }
+  .welcome-steps{ display:flex; flex-direction:column; gap:12px; }
+  .welcome-step{ display:flex; gap:12px; align-items:flex-start; }
+  .welcome-num{
+    flex:none; width:24px; height:24px; border-radius:50%;
+    background:var(--accent); color:var(--accent-ink);
+    font-family:var(--font-label); font-weight:700; font-size:12px;
+    display:flex; align-items:center; justify-content:center; margin-top:2px;
+  }
+  .welcome-step-body{ flex:1; display:flex; flex-direction:column; gap:8px; font-size:13.5px; }
+  .welcome-step-body .btn{ width:100%; }
+  .welcome-step-body input[type="password"]{ background:var(--surface-2); }
+  .welcome-msg{ font-size:12.5px; line-height:1.4; min-height:1em; }
+  .welcome-msg.err{ color:var(--accent-warm); }
+  .welcome-msg.ok{ color:var(--accent); }
+  .welcome-foot{ display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .welcome-foot .link-btn{ font-size:12.5px; }
+
   [hidden]{ display:none !important; }
 
   @media (max-width:400px){
@@ -996,6 +1041,39 @@
 
 </div>
 
+<div class="welcome-overlay" id="welcome" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle" hidden>
+  <div class="welcome-card">
+    <h2 id="welcomeTitle" data-i18n="wTitle">One quick step before you start</h2>
+    <p data-i18n="wBody">TinyTune writes your daily spark with an AI. Connecting takes about a minute, and Google Gemini is free.</p>
+    <div class="welcome-steps">
+      <div class="welcome-step">
+        <span class="welcome-num">1</span>
+        <div class="welcome-step-body">
+          <a class="btn btn-primary" id="welcomeGetKey" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style="text-decoration:none" data-i18n="wStep1">Get my free key</a>
+          <span class="sub" style="font-size:12.5px;margin:0;" data-i18n="wStep1Hint">Sign in with Google and press “Create API key”.</span>
+        </div>
+      </div>
+      <div class="welcome-step">
+        <span class="welcome-num">2</span>
+        <div class="welcome-step-body">
+          <span data-i18n="wStep2">Copy the key it shows you.</span>
+        </div>
+      </div>
+      <div class="welcome-step">
+        <span class="welcome-num">3</span>
+        <div class="welcome-step-body">
+          <input type="password" id="welcomeKey" autocomplete="off" autocapitalize="off" spellcheck="false" />
+          <div class="welcome-msg" id="welcomeMsg" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+    <div class="welcome-foot">
+      <span class="sub" style="font-size:12px;margin:0;text-align:center;" data-i18n="wOther">Have an OpenAI or Claude key instead? Paste it the same way, TinyTune detects which one it is.</span>
+      <button class="link-btn" id="welcomeSkip" type="button" data-i18n="wSkip">Skip and hear a demo</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   const TOPICS = [
@@ -1082,6 +1160,15 @@ Formatting requirement (critical, follow exactly): write EVERY line as its own l
       aiBadKey:'That key was not accepted. Check it was copied fully and try again.',
       aiBadModel:'That model name was not found. Open "Advanced" and enter a current model name.',
       aiNetwork:'Could not reach the AI service. Check your connection and try again.',
+      wTitle:'One quick step before you start',
+      wBody:'TinyTune writes your daily spark with an AI. Connecting takes about a minute, and Google Gemini is free.',
+      wStep1:'Get my free key', wStep1Hint:'Sign in with Google and press “Create API key”.',
+      wStep2:'Copy the key it shows you.',
+      wKeyPlaceholder:'Paste the key here, it connects by itself',
+      wOther:'Have an OpenAI or Claude key instead? Paste it the same way, TinyTune detects which one it is.',
+      wSkip:'Skip and hear a demo',
+      wChecking:'Checking your key…', wBadFormat:'That does not look like an API key. Copy the whole key and paste it again.',
+      wDone:'Connected! Pick a topic to start.',
       capabilityMissing:'Generating needs "Ask Claude", which isn’t available right now. Make sure you’re signed in to Claude (claude.ai) in this browser, then reload this page and try again.',
       notGranted:'This preview needs permission to ask Claude — try tapping Generate again.',
       rateLimited:"That's a lot of sparks — give it a few seconds and try again.",
@@ -1128,6 +1215,15 @@ Formatting requirement (critical, follow exactly): write EVERY line as its own l
       aiBadKey:'המפתח לא התקבל. ודא שהעתקת אותו במלואו ונסה שוב.',
       aiBadModel:'שם המודל לא נמצא. פתח "מתקדם" והכנס שם מודל עדכני.',
       aiNetwork:'לא הצלחתי להגיע לשירות ה-AI. בדוק את החיבור ונסה שוב.',
+      wTitle:'צעד קטן לפני שמתחילים',
+      wBody:'TinyTune כותבת את הטעימה היומית שלך בעזרת AI. החיבור לוקח בערך דקה, ו-Google Gemini בחינם.',
+      wStep1:'קבלת מפתח חינמי', wStep1Hint:'היכנס עם Google ולחץ על “Create API key”.',
+      wStep2:'העתק את המפתח שמופיע.',
+      wKeyPlaceholder:'הדבק כאן את המפתח, והחיבור קורה לבד',
+      wOther:'יש לך מפתח של OpenAI או של Claude? הדבק אותו באותה צורה, TinyTune מזהה לבד איזה זה.',
+      wSkip:'דלג ושמע הדגמה',
+      wChecking:'בודק את המפתח…', wBadFormat:'זה לא נראה כמו מפתח API. העתק את המפתח המלא והדבק שוב.',
+      wDone:'מחובר! בחר נושא ומתחילים.',
       capabilityMissing:'היצירה דורשת את היכולת "לשאול את קלוד" שלא זמינה כרגע. ודא שאתה מחובר ל-Claude (claude.ai) באותו דפדפן, רענן את הדף ונסה שוב.',
       notGranted:'הפרוטוטייפ הזה זקוק להרשאה לשאול את קלוד — נסה ללחוץ שוב על "צור".',
       rateLimited:'יותר מדי טעימות בבת אחת — המתן כמה שניות ונסה שוב.',
@@ -1180,6 +1276,7 @@ Formatting requirement (critical, follow exactly): write EVERY line as its own l
     });
     $('#customTopic').placeholder = T('customTopicPlaceholder');
     renderAICard();
+    if(typeof renderWelcome === 'function') renderWelcome();
   }
 
   function resetOnAirUI(){
@@ -1888,6 +1985,85 @@ Formatting requirement (critical, follow exactly): write EVERY line as its own l
   });
   $('#aiDemoBtn').addEventListener('click', ()=> generateSpark(false, true));
 
+  // ---------- welcome / one-paste connect ----------
+  // Pasting a key anywhere auto-detects the provider from its prefix,
+  // verifies it with a tiny test call, and connects, so there is nothing
+  // to pick or press.
+  const WELCOME_SEEN_KEY = 'tinytune_welcome_v1';
+  function detectProviderFromKey(k){
+    if(/^AIza[0-9A-Za-z_\-]{20,}$/.test(k)) return 'gemini';
+    if(/^sk-ant-[0-9A-Za-z_\-]{20,}$/.test(k)) return 'anthropic';
+    if(/^sk-[0-9A-Za-z_\-]{20,}$/.test(k)) return 'openai';
+    return null;
+  }
+  function setWelcomeMsg(text, kind){
+    const el = $('#welcomeMsg');
+    el.textContent = text || '';
+    el.className = 'welcome-msg' + (kind ? ' ' + kind : '');
+  }
+  function closeWelcome(remember){
+    $('#welcome').hidden = true;
+    if(remember){ try{ localStorage.setItem(WELCOME_SEEN_KEY, '1'); }catch(e){} }
+  }
+  function renderWelcome(){
+    const w = $('#welcome');
+    w.setAttribute('dir', state.language === 'he' ? 'rtl' : 'ltr');
+    w.setAttribute('lang', state.language === 'he' ? 'he' : 'en');
+    $('#welcomeKey').placeholder = T('wKeyPlaceholder');
+  }
+  function maybeShowWelcome(){
+    let seen = false;
+    try{ seen = localStorage.getItem(WELCOME_SEEN_KEY) === '1'; }catch(e){}
+    if(seen || aiState.claude || loadAI()) return;
+    renderWelcome();
+    $('#welcome').hidden = false;
+  }
+  async function connectWithKey(rawKey, fromWelcome){
+    const key = String(rawKey || '').trim();
+    if(!key) return false;
+    const provider = detectProviderFromKey(key);
+    if(!provider){
+      if(fromWelcome) setWelcomeMsg(T('wBadFormat'), 'err');
+      return false;
+    }
+    if(fromWelcome) setWelcomeMsg(T('wChecking'));
+    try{
+      await callProvider({ provider, key, model:'' }, 'Reply with the single word: ok');
+    } catch(err){
+      if(fromWelcome){
+        const code = err && err.code;
+        setWelcomeMsg(code === 'bad_key' ? T('aiBadKey') : code === 'network' ? T('aiNetwork') :
+                      code === 'bad_model' ? T('aiBadModel') : T('genericError'), 'err');
+      }
+      return false;
+    }
+    saveAI({ provider, key, model:'' });
+    aiState.editing = false;
+    renderAICard();
+    if(fromWelcome){
+      setWelcomeMsg(T('wDone'), 'ok');
+      setTimeout(()=> closeWelcome(true), 900);
+    }
+    return true;
+  }
+  $('#welcomeKey').addEventListener('input', ()=>{
+    const v = $('#welcomeKey').value.trim();
+    if(!v){ setWelcomeMsg(''); return; }
+    // wait until it looks like a whole key, then connect by itself
+    if(detectProviderFromKey(v)){ connectWithKey(v, true); }
+    else if(v.length > 12){ setWelcomeMsg(T('wBadFormat'), 'err'); }
+  });
+  $('#welcomeSkip').addEventListener('click', ()=> closeWelcome(true));
+  document.addEventListener('keydown', e=>{
+    if(e.key === 'Escape' && !$('#welcome').hidden) closeWelcome(true);
+  });
+  // the same auto-detect on the On Air card's key field
+  $('#aiKey').addEventListener('input', ()=>{
+    const p = detectProviderFromKey($('#aiKey').value.trim());
+    if(p){ $('#aiProvider').value = p; renderAICard(); }
+  });
+
+
   // Is Claude's built-in "ask Claude" reachable in this view? (inside Claude only)
   (async function detectClaude(){
     try{
@@ -1897,6 +2073,7 @@ Formatting requirement (critical, follow exactly): write EVERY line as its own l
       }
     }catch(e){ aiState.claude = false; }
     renderAICard();
+    maybeShowWelcome();
   })();
 
 

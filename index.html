@@ -1160,6 +1160,7 @@ Formatting requirement (critical, follow exactly): write EVERY line as its own l
       aiBadKey:'That key was not accepted. Check it was copied fully and try again.',
       aiBadModel:'That model name was not found. Open "Advanced" and enter a current model name.',
       aiNetwork:'Could not reach the AI service. Check your connection and try again.',
+      aiBusy:'The AI service is very busy right now. Wait a few seconds and press Generate again.',
       wTitle:'One quick step before you start',
       wBody:'TinyTune writes your daily spark with an AI. Connecting takes about a minute, and Google Gemini is free.',
       wStep1:'Get my free key', wStep1Hint:'Sign in with Google and press “Create API key”.',
@@ -1215,6 +1216,7 @@ Formatting requirement (critical, follow exactly): write EVERY line as its own l
       aiBadKey:'המפתח לא התקבל. ודא שהעתקת אותו במלואו ונסה שוב.',
       aiBadModel:'שם המודל לא נמצא. פתח "מתקדם" והכנס שם מודל עדכני.',
       aiNetwork:'לא הצלחתי להגיע לשירות ה-AI. בדוק את החיבור ונסה שוב.',
+      aiBusy:'שירות ה-AI עמוס מאוד כרגע. חכה כמה שניות ולחץ שוב על צור לי טעימה.',
       wTitle:'צעד קטן לפני שמתחילים',
       wBody:'TinyTune כותבת את הטעימה היומית שלך בעזרת AI. החיבור לוקח בערך דקה, ו-Google Gemini בחינם.',
       wStep1:'קבלת מפתח חינמי', wStep1Hint:'היכנס עם Google ולחץ על “Create API key”.',
@@ -1902,6 +1904,32 @@ Formatting requirement (critical, follow exactly): write EVERY line as its own l
     return text;
   }
 
+  // Overloaded services (HTTP 503) are common on free tiers, so a spark
+  // quietly retries, and for Gemini falls back to sibling models, before
+  // the visitor ever sees an error.
+  const sleep = (ms)=> new Promise(r=>setTimeout(r, ms));
+  async function callProviderResilient(cfg, prompt){
+    const base = (cfg.model || '').trim();
+    const models = (cfg.provider === 'gemini' && !base)
+      ? ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.5-flash-lite']
+      : [base || AI_PROVIDERS[cfg.provider].model];
+    let lastErr = null;
+    for(let i=0; i<models.length; i++){
+      for(let attempt=0; attempt<2; attempt++){
+        try{
+          return await callProvider({ ...cfg, model: models[i] }, prompt);
+        } catch(e){
+          lastErr = e;
+          const busy = e && e.code === 'upstream_error';
+          if(busy){ if(attempt === 0) await sleep(1500); continue; }
+          if(e && e.code === 'bad_model' && i < models.length-1) break;
+          throw e;
+        }
+      }
+    }
+    throw lastErr;
+  }
+
   function renderAICard(){
     const cfg = loadAI();
     const lang = state.language === 'he' ? 'he' : 'en';
@@ -2128,7 +2156,7 @@ Formatting requirement (critical, follow exactly): write EVERY line as its own l
       } else if(aiCfg && aiCfg.key){
         // the visitor's own key wins over anything else
         const prompt = buildPrompt(topic, wordsForDuration(state.durationMinutes), isAnother, level);
-        rawText = await callProvider(aiCfg, prompt);
+        rawText = await callProviderResilient(aiCfg, prompt);
       } else {
         // `claude` is absent outside a Claude viewer; use('sample') is null
         // when Ask-Claude isn't available (e.g. not signed in).
@@ -2188,6 +2216,7 @@ Formatting requirement (critical, follow exactly): write EVERY line as its own l
       else if(code === 'bad_key') msg = T('aiBadKey');
       else if(code === 'bad_model') msg = T('aiBadModel');
       else if(code === 'network') msg = T('aiNetwork');
+      else if(code === 'upstream_error' && /HTTP 5/.test(String(err && err.message))) msg = T('aiBusy');
       else if(code === 'session_expired' || code === 'sampling_disabled' ||
               code === 'capability_disabled' || code === 'not_declared' ||
               code === 'capability_removed') msg = T('capabilityMissing');
